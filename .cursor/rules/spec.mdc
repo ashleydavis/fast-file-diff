@@ -1,0 +1,14 @@
+---
+description: Code must follow SPEC.md and IMPLEMENTATION.md
+alwaysApply: true
+---
+
+# Follow SPEC.md and IMPLEMENTATION.md
+
+All implementation in this project must conform to [SPEC.md](../SPEC.md). When implementing the ffd CLI, **follow [IMPLEMENTATION.md](../IMPLEMENTATION.md) in commit order**: work through the commits from top to bottom, use the "Next:" line and checkboxes to track progress, and ensure each change matches both the commit description and the spec. **Before each commit**, run: (1) build the code, (2) run unit tests, (3) run smoke tests (once available). Only commit if all pass. **When making the commit**, use the **Message** (first line) and **Description** (body) from the current commit block in IMPLEMENTATION.md (the one indicated by "Next:"). The goal is for the CLI tool to eventually conform fully to SPEC.md; the implementation plan is the prescribed sequence to get there.
+
+Good user experience is very important; design choices should favor clarity, helpful feedback, and usability. All code must run on Linux, macOS, and Windows; use portable APIs and avoid OS-specific behavior unless guarded. When adding or changing the diff tool (CLI behavior, comparison logic, output format, or performance approach), read SPEC.md first and keep the code aligned with it. If the spec is updated, change the code to match. Keep [README.md](../README.md) updated with the actual CLI functionality (arguments, options, output formats, usage).
+
+Use test-driven development: create a **failing** unit test before writing each function, then write the code so the test passes. Create a unit test for every function. If you cannot create a failing test before writing a function, stop and ask for directions. Comment every function to indicate its intent.
+
+Write smoke tests as you go: for each commit that introduces behavior testable via the CLI, add a smoke test in that commit; extend the harness when needed. Create smoke tests as shell scripts that operate on the compiled executable (`bin/ffd`), with examples under `./test`. Each smoke test must be independent (for possible parallelization). Run all with `./smoke-tests.sh`; run one with `./smoke-tests.sh <test-name>`; list tests with `./smoke-tests.sh ls`.
