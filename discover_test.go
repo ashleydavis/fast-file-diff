@@ -39,6 +39,19 @@ func TestDiscoveredSet_rightOnlyNoPair(t *testing.T) {
 	}
 }
 
+func TestDiscoveredSet_bothSidesNoOnly(t *testing.T) {
+	pool := newPathPool()
+	s := newDiscoveredSet(pool)
+	s.Add("f", sideLeft)
+	s.Add("f", sideRight)
+	if len(s.LeftOnlyPaths()) != 0 {
+		t.Errorf("LeftOnlyPaths() should be empty when both have f, got %v", s.LeftOnlyPaths())
+	}
+	if len(s.RightOnlyPaths()) != 0 {
+		t.Errorf("RightOnlyPaths() should be empty when both have f, got %v", s.RightOnlyPaths())
+	}
+}
+
 func TestDiscoveredSet_multiplePairs(t *testing.T) {
 	pool := newPathPool()
 	s := newDiscoveredSet(pool)

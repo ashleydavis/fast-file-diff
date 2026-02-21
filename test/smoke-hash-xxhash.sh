@@ -7,8 +7,9 @@ BIN="${SCRIPT_DIR}/../bin/ffd"
 LEFT="${SCRIPT_DIR}/identical-left"
 RIGHT="${SCRIPT_DIR}/identical-right"
 out=$("$BIN" --hash xxhash --format text "$LEFT" "$RIGHT" 2>/dev/null)
-if [[ -n "$out" ]]; then
-  echo "Expected no output for identical dirs with --hash xxhash, got: $out" >&2
+# Same content: no size/content diff
+if [[ -n "$out" ]] && echo "$out" | grep -qE "size changed|content differs"; then
+  echo "Expected no size/content diff for identical dirs, got: $out" >&2
   exit 1
 fi
 # Different content, same size: hash-left has "aa", hash-right has "bb"

@@ -1,6 +1,9 @@
 package main
 
-import "sync"
+import (
+	"path/filepath"
+	"sync"
+)
 
 type side int
 
@@ -29,7 +32,7 @@ func newDiscoveredSet(pool *pathPool) *discoveredSet {
 // Add records that rel was seen on the given side. It returns true when this
 // completes a pair (the other side had already been seen for rel).
 func (s *discoveredSet) Add(rel string, sd side) bool {
-	rel = s.pool.Intern(rel)
+	rel = s.pool.Intern(filepath.Clean(filepath.ToSlash(rel)))
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	switch sd {
@@ -48,4 +51,30 @@ func (s *discoveredSet) Add(rel string, sd side) bool {
 	default:
 		return false
 	}
+}
+
+// LeftOnlyPaths returns relative paths that were seen on left but not on right.
+func (s *discoveredSet) LeftOnlyPaths() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var out []string
+	for rel := range s.left {
+		if !s.right[rel] {
+			out = append(out, rel)
+		}
+	}
+	return out
+}
+
+// RightOnlyPaths returns relative paths that were seen on right but not on left.
+func (s *discoveredSet) RightOnlyPaths() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var out []string
+	for rel := range s.right {
+		if !s.left[rel] {
+			out = append(out, rel)
+		}
+	}
+	return out
 }

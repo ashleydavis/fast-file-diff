@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sync/atomic"
 	"time"
@@ -98,6 +99,18 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		logger.Log("diff: " + r.Rel + " " + r.Reason)
 	}
 	close(doneCh)
+	for _, rel := range set.LeftOnlyPaths() {
+		path := filepath.Join(left, rel)
+		if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
+			diffs = append(diffs, DiffResult{Rel: rel, Reason: "left only", Size: info.Size(), Mtime: info.ModTime().Truncate(time.Second), LeftOnly: true})
+		}
+	}
+	for _, rel := range set.RightOnlyPaths() {
+		path := filepath.Join(right, rel)
+		if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
+			diffs = append(diffs, DiffResult{Rel: rel, Reason: "right only", Size: info.Size(), Mtime: info.ModTime().Truncate(time.Second)})
+		}
+	}
 	switch outputFormat {
 	case "table":
 		formatTable(diffs, os.Stdout)
