@@ -28,27 +28,22 @@ type ProgressCounts struct {
 }
 
 // comparePair hashes both files and compares hashes. Caller must have already checked size and mtime
-// (same size, different mtime); only such pairs should be sent to workers. cached must be non-nil.
-func comparePair(leftRoot, rightRoot, relativePath string, hashAlg string, threshold int, cached *PairInfo) (different bool, reason string, hashStr string, size int64, mtime time.Time) {
+// (same size, different mtime); only such pairs should be sent to workers.
+func comparePair(leftRoot, rightRoot, relativePath string, hashAlg string, threshold int) (different bool, reason string, hashStr string) {
 	leftPath := filepath.Join(leftRoot, relativePath)
 	rightPath := filepath.Join(rightRoot, relativePath)
-	if cached == nil {
-		panic("comparePair: missing file info (cached is nil); discovery walk must provide PairInfo for every pair")
-	}
-	leftSize := cached.LeftSize
-	leftModTime := cached.LeftMtime
 	leftHash, err := hashFile(leftPath, hashAlg, threshold)
 	if err != nil {
-		return true, "hash left: " + err.Error(), "", leftSize, leftModTime
+		return true, "hash left: " + err.Error(), ""
 	}
 	rightHash, err := hashFile(rightPath, hashAlg, threshold)
 	if err != nil {
-		return true, "hash right: " + err.Error(), "", leftSize, leftModTime
+		return true, "hash right: " + err.Error(), ""
 	}
 	if leftHash == rightHash {
-		return false, "", "", 0, time.Time{}
+		return false, "", ""
 	}
-	return true, "content differs", leftHash, leftSize, leftModTime
+	return true, "content differs", leftHash
 }
 
 // RunWorkers starts numWorkers workers that read from pairCh, compare each pair, and send to resultCh.
@@ -60,9 +55,9 @@ func RunWorkers(leftRoot, rightRoot string, numWorkers int, hashAlg string, thre
 		go func() {
 			defer wg.Done()
 			for job := range workCh {
-				diff, reason, hashStr, size, mtime := comparePair(leftRoot, rightRoot, job.Rel, hashAlg, threshold, job.Cached)
+				diff, reason, hashStr := comparePair(leftRoot, rightRoot, job.Rel, hashAlg, threshold)
 				if diff {
-					resultCh <- DiffResult{Rel: job.Rel, Reason: reason, Hash: hashStr, Size: size, Mtime: mtime}
+					resultCh <- DiffResult{Rel: job.Rel, Reason: reason, Hash: hashStr, Size: job.Cached.LeftSize, Mtime: job.Cached.LeftMtime}
 				}
 				if progress != nil {
 					atomic.AddInt32(&progress.Processed, 1)
