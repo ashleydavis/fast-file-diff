@@ -12,8 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const pairQueueCap = 10000
-
 const (
 	ExitSuccess  = 0
 	ExitUsage    = 1
@@ -84,21 +82,40 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	logger.Log("started comparison")
 	pool := lib.NewPathPool()
 	set := lib.NewDiscoveredSet(pool)
-	pairCh := make(chan string, pairQueueCap)
 	resultCh := make(chan lib.DiffResult, 256)
 	progressCounts := &lib.ProgressCounts{}
-	go lib.WalkBothTrees(left, right, dirBatchSize, logger, set, pairCh)
-	lib.RunWorkers(left, right, numWorkers, hashAlg, hashThreshold, pairCh, resultCh, progressCounts)
-	doneCh := make(chan struct{})
+
+	// Phase 1: discover all file pairs by walking both trees.
+	walkDoneCh := make(chan struct{})
+	go lib.WalkBothTrees(left, right, dirBatchSize, logger, set, walkDoneCh)
 	if !quiet && lib.IsTTY(os.Stderr) {
-		go progressLoop(progressCounts, doneCh)
+		go discoveryProgressLoop(set, walkDoneCh)
+	}
+	<-walkDoneCh
+
+	pairPaths := set.PairPaths()
+	progressCounts.TotalPairs = int32(len(pairPaths))
+
+	// Phase 2: compare all pairs; workers read from pairCh.
+	pairCh := make(chan string, len(pairPaths)+1)
+	go func() {
+		for _, rel := range pairPaths {
+			pairCh <- rel
+		}
+		close(pairCh)
+	}()
+	go lib.RunWorkers(left, right, numWorkers, hashAlg, hashThreshold, pairCh, resultCh, progressCounts)
+
+	compareDoneCh := make(chan struct{})
+	if !quiet && lib.IsTTY(os.Stderr) {
+		go progressLoop(progressCounts, compareDoneCh)
 	}
 	var diffs []lib.DiffResult
 	for diffResult := range resultCh {
 		diffs = append(diffs, diffResult)
 		logger.Log("diff: " + diffResult.Rel + " " + diffResult.Reason)
 	}
-	close(doneCh)
+	close(compareDoneCh)
 	for _, rel := range set.LeftOnlyPaths() {
 		path := filepath.Join(left, rel)
 		if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
@@ -130,6 +147,20 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func discoveryProgressLoop(set *lib.DiscoveredSet, doneCh <-chan struct{}) {
+	tick := time.NewTicker(100 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		select {
+		case <-doneCh:
+			return
+		case <-tick.C:
+			n := set.PairsCount()
+			fmt.Fprintf(os.Stderr, "\rscanning: %d file pairs found   ", n)
+		}
+	}
+}
+
 func estimateRemainingFromElapsed(elapsed time.Duration, processed, pending int32) time.Duration {
 	if processed <= 0 || pending <= 0 {
 		return 0
@@ -155,17 +186,25 @@ func progressLoop(progressCounts *lib.ProgressCounts, doneCh <-chan struct{}) {
 			return
 		case <-tick.C:
 			processedCount := atomic.LoadInt32(&progressCounts.Processed)
-			enqueuedCount := atomic.LoadInt32(&progressCounts.Enqueued)
-			pending := enqueuedCount - processedCount
-			if enqueuedCount == 0 && processedCount == 0 {
+			totalPairs := atomic.LoadInt32(&progressCounts.TotalPairs)
+			startTimeNano := atomic.LoadInt64(&progressCounts.StartTimeUnixNano)
+			if processedCount == 0 && totalPairs == 0 {
 				continue
 			}
-			startTimeNano := atomic.LoadInt64(&progressCounts.StartTimeUnixNano)
-			remaining := estimateRemainingDuration(processedCount, pending, startTimeNano)
-			if remaining > 0 {
-				fmt.Fprintf(os.Stderr, "\rprocessed %d, pending %d, ~%s remaining   ", processedCount, pending, remaining.Round(time.Second))
+			if totalPairs > 0 {
+				pending := totalPairs - processedCount
+				if pending < 0 {
+					pending = 0
+				}
+				remaining := estimateRemainingDuration(processedCount, pending, startTimeNano)
+				if remaining > 0 {
+					fmt.Fprintf(os.Stderr, "\rcomparing: %d of %d, ~%s remaining   ", processedCount, totalPairs, remaining.Round(time.Second))
+				} else {
+					fmt.Fprintf(os.Stderr, "\rcomparing: %d of %d   ", processedCount, totalPairs)
+				}
 			} else {
-				fmt.Fprintf(os.Stderr, "\rprocessed %d, pending %d   ", processedCount, pending)
+				enqueuedCount := atomic.LoadInt32(&progressCounts.Enqueued)
+				fmt.Fprintf(os.Stderr, "\rprocessed %d, enqueued %d   ", processedCount, enqueuedCount)
 			}
 		}
 	}

@@ -20,10 +20,12 @@ type DiffResult struct {
 
 // ProgressCounts holds counters and start time for the progress indicator.
 // Exported fields so main can use atomic load for progress display.
+// TotalPairs is the total number of pairs to compare (set before starting workers); 0 means unknown.
 type ProgressCounts struct {
 	Enqueued          int32
 	Processed         int32
 	StartTimeUnixNano int64
+	TotalPairs        int32
 }
 
 func comparePair(leftRoot, rightRoot, rel, hashAlg string, threshold int) (different bool, reason string, hashStr string, size int64, mtime time.Time) {

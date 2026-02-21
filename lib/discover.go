@@ -14,12 +14,14 @@ const (
 )
 
 // DiscoveredSet tracks which relative paths have been seen on left and right.
-// When the same path is seen on both sides, Add returns true (form a pair).
+// When the same path is seen on both sides, Add returns true (form a pair)
+// and the path is appended to the list returned by PairPaths().
 type DiscoveredSet struct {
-	mu    sync.Mutex
-	pool  *PathPool
-	left  map[string]bool
-	right map[string]bool
+	mu        sync.Mutex
+	pool      *PathPool
+	left      map[string]bool
+	right     map[string]bool
+	pairPaths []string // paths that have been seen on both sides, in discovery order
 }
 
 // NewDiscoveredSet returns a new discovered set using the given path pool.
@@ -42,6 +44,9 @@ func (discoveredSet *DiscoveredSet) Add(rel string, side Side) bool {
 		if discoveredSet.right[rel] {
 			firstTime := !discoveredSet.left[rel]
 			discoveredSet.left[rel] = true
+			if firstTime {
+				discoveredSet.pairPaths = append(discoveredSet.pairPaths, rel)
+			}
 			return firstTime
 		}
 		discoveredSet.left[rel] = true
@@ -50,6 +55,9 @@ func (discoveredSet *DiscoveredSet) Add(rel string, side Side) bool {
 		if discoveredSet.left[rel] {
 			firstTime := !discoveredSet.right[rel]
 			discoveredSet.right[rel] = true
+			if firstTime {
+				discoveredSet.pairPaths = append(discoveredSet.pairPaths, rel)
+			}
 			return firstTime
 		}
 		discoveredSet.right[rel] = true
@@ -57,6 +65,22 @@ func (discoveredSet *DiscoveredSet) Add(rel string, side Side) bool {
 	default:
 		return false
 	}
+}
+
+// PairsCount returns the number of file pairs discovered so far (both sides seen).
+func (discoveredSet *DiscoveredSet) PairsCount() int {
+	discoveredSet.mu.Lock()
+	defer discoveredSet.mu.Unlock()
+	return len(discoveredSet.pairPaths)
+}
+
+// PairPaths returns a copy of the relative paths that form pairs (seen on both sides), in discovery order.
+func (discoveredSet *DiscoveredSet) PairPaths() []string {
+	discoveredSet.mu.Lock()
+	defer discoveredSet.mu.Unlock()
+	out := make([]string, len(discoveredSet.pairPaths))
+	copy(out, discoveredSet.pairPaths)
+	return out
 }
 
 // LeftOnlyPaths returns relative paths that were seen on left but not on right.

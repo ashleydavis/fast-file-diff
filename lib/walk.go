@@ -42,19 +42,18 @@ func walkTree(root string, fn func(rel string, isDir bool)) {
 }
 
 // WalkBothTrees walks left and right in parallel, logs every dir/file to logger,
-// feeds the discovered set and sends pair relative paths to pairCh when both sides have the file.
-func WalkBothTrees(leftRoot, rightRoot string, dirBatchSize int, log *Logger, set *DiscoveredSet, pairCh chan<- string) {
+// and records discovered paths in set. When both walks are done, it closes doneCh.
+// Pairs (paths seen on both sides) are stored in set and can be read via set.PairPaths() after doneCh is closed.
+func WalkBothTrees(leftRoot, rightRoot string, dirBatchSize int, log *Logger, set *DiscoveredSet, doneCh chan struct{}) {
 	var wg sync.WaitGroup
-	walkOne := func(root string, sd Side) {
+	walkOne := func(root string, side Side) {
 		defer wg.Done()
 		walkTreeWithBatch(root, dirBatchSize, func(rel string, isDir bool) {
 			if isDir {
 				log.Log("dir: " + rel)
 			} else {
 				log.Log("file: " + rel)
-				if set.Add(rel, sd) {
-					pairCh <- rel
-				}
+				set.Add(rel, side)
 			}
 		})
 	}
@@ -62,5 +61,5 @@ func WalkBothTrees(leftRoot, rightRoot string, dirBatchSize int, log *Logger, se
 	go walkOne(leftRoot, SideLeft)
 	go walkOne(rightRoot, SideRight)
 	wg.Wait()
-	close(pairCh)
+	close(doneCh)
 }

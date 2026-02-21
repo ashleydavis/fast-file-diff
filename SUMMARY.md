@@ -325,3 +325,13 @@ Test data lives under `test/` (e.g. `five-same-left`, `five-same-right`, `five-o
 **Why:** Variable names should describe what they represent; `idx` and `jdx` do not indicate which slice or comparison they index.
 
 **What it accomplishes:** Sort comparison parameters are self-explanatory; build and tests pass.
+
+---
+
+## Two-phase flow: discover all pairs first, then compare
+
+**What was done:** Changed the comparison flow so both directory trees are fully walked before any file comparison starts. Phase 1 (discovery): WalkBothTrees now takes a doneCh instead of pairCh; it only records paths in DiscoveredSet and closes doneCh when both walks finish. DiscoveredSet now keeps a pairPaths slice (appended when Add forms a pair) and exposes PairsCount() and PairPaths(). During discovery, progress on stderr shows "scanning: N file pairs found". Phase 2 (compare): After <-walkDoneCh, main gets pairPaths := set.PairPaths(), sets ProgressCounts.TotalPairs, feeds pairPaths into pairCh via a goroutine, then starts RunWorkers. Compare-phase progress shows "comparing: N of Total, ~Xs remaining" using TotalPairs for the denominator and (TotalPairs - Processed) for the time estimate. Added discoveryProgressLoop(set, walkDoneCh) and updated progressLoop to use TotalPairs when set.
+
+**Why:** Previously "pending" was only the in-flight queue depth (usually 0 or 1 when comparison kept up with the walk), so time remaining was almost always 0s. By discovering all pairs first, we know the total count and can show accurate "N of M" and remaining-time estimates during the compare phase.
+
+**What it accomplishes:** Users see how many file pairs were found while scanning; during comparison they see "N of Total" and a meaningful ~Xs remaining estimate. All unit and smoke tests pass.
