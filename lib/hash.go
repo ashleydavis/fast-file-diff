@@ -13,12 +13,12 @@ import (
 )
 
 func hashFile(path, algorithm string, threshold int) (string, error) {
-	f, err := os.Open(path)
+	file, err := os.Open(path)
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
-	info, err := f.Stat()
+	defer file.Close()
+	info, err := file.Stat()
 	if err != nil {
 		return "", err
 	}
@@ -27,9 +27,9 @@ func hashFile(path, algorithm string, threshold int) (string, error) {
 		size = 0
 	}
 	if int(size) < threshold {
-		return hashFull(f, algorithm, int(size))
+		return hashFull(file, algorithm, int(size))
 	}
-	return hashStream(f, algorithm, threshold)
+	return hashStream(file, algorithm, threshold)
 }
 
 var bufPool = sync.Pool{
@@ -39,15 +39,15 @@ var bufPool = sync.Pool{
 	},
 }
 
-func hashFull(r io.Reader, algorithm string, size int) (string, error) {
-	buf := make([]byte, size)
-	if _, err := io.ReadFull(r, buf); err != nil {
+func hashFull(reader io.Reader, algorithm string, size int) (string, error) {
+	fullBuffer := make([]byte, size)
+	if _, err := io.ReadFull(reader, fullBuffer); err != nil {
 		return "", err
 	}
-	return hashBytes(buf, algorithm)
+	return hashBytes(fullBuffer, algorithm)
 }
 
-func hashStream(r io.Reader, algorithm string, bufSize int) (string, error) {
+func hashStream(reader io.Reader, algorithm string, bufSize int) (string, error) {
 	buf := bufPool.Get().(*[]byte)
 	defer bufPool.Put(buf)
 	if cap(*buf) < bufSize {
@@ -58,9 +58,9 @@ func hashStream(r io.Reader, algorithm string, bufSize int) (string, error) {
 	case "xxhash":
 		hasher := xxhash.New()
 		for {
-			n, err := r.Read(readBuffer)
-			if n > 0 {
-				hasher.Write(readBuffer[:n])
+			bytesRead, err := reader.Read(readBuffer)
+			if bytesRead > 0 {
+				hasher.Write(readBuffer[:bytesRead])
 			}
 			if err == io.EOF {
 				return fmt.Sprintf("%016x", hasher.Sum64()), nil
@@ -70,28 +70,28 @@ func hashStream(r io.Reader, algorithm string, bufSize int) (string, error) {
 			}
 		}
 	case "sha256":
-		hash := sha256.New()
+		hashDigest := sha256.New()
 		for {
-			n, err := r.Read(readBuffer)
-			if n > 0 {
-				hash.Write(readBuffer[:n])
+			bytesRead, err := reader.Read(readBuffer)
+			if bytesRead > 0 {
+				hashDigest.Write(readBuffer[:bytesRead])
 			}
 			if err == io.EOF {
-				return hex.EncodeToString(hash.Sum(nil)), nil
+				return hex.EncodeToString(hashDigest.Sum(nil)), nil
 			}
 			if err != nil {
 				return "", err
 			}
 		}
 	case "md5":
-		hash := md5.New()
+		hashDigest := md5.New()
 		for {
-			n, err := r.Read(readBuffer)
-			if n > 0 {
-				hash.Write(readBuffer[:n])
+			bytesRead, err := reader.Read(readBuffer)
+			if bytesRead > 0 {
+				hashDigest.Write(readBuffer[:bytesRead])
 			}
 			if err == io.EOF {
-				return hex.EncodeToString(hash.Sum(nil)), nil
+				return hex.EncodeToString(hashDigest.Sum(nil)), nil
 			}
 			if err != nil {
 				return "", err
@@ -105,14 +105,14 @@ func hashStream(r io.Reader, algorithm string, bufSize int) (string, error) {
 func hashBytes(data []byte, algorithm string) (string, error) {
 	switch algorithm {
 	case "xxhash":
-		sum64 := xxhash.Sum64(data)
-		return fmt.Sprintf("%016x", sum64), nil
+		xxSum64 := xxhash.Sum64(data)
+		return fmt.Sprintf("%016x", xxSum64), nil
 	case "sha256":
-		sum := sha256.Sum256(data)
-		return hex.EncodeToString(sum[:]), nil
+		shaDigest := sha256.Sum256(data)
+		return hex.EncodeToString(shaDigest[:]), nil
 	case "md5":
-		sum := md5.Sum(data)
-		return hex.EncodeToString(sum[:]), nil
+		md5Digest := md5.Sum(data)
+		return hex.EncodeToString(md5Digest[:]), nil
 	default:
 		return "", fmt.Errorf("unknown hash algorithm: %s", algorithm)
 	}

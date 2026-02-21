@@ -47,9 +47,9 @@ func TestPathUnder_underRoot(t *testing.T) {
 
 func TestPathPool_Intern_dedupe(t *testing.T) {
 	pool := NewPathPool()
-	a := pool.Intern("foo/bar")
-	b := pool.Intern("foo/bar")
-	if a != b {
+	firstInterned := pool.Intern("foo/bar")
+	secondInterned := pool.Intern("foo/bar")
+	if firstInterned != secondInterned {
 		t.Error("Intern should return same string for same input")
 	}
 }

@@ -305,3 +305,13 @@ Test data lives under `test/` (e.g. `five-same-left`, `five-same-right`, `five-o
 **Why:** The follow-up plan required final verification that the code compiles, all tests pass, and the README is complete for users and developers.
 
 **What it accomplishes:** Build and all unit and smoke tests pass; README is complete for users (quick start, CLI, scripts) and developers (tests, layout, docs). The follow-up plan is complete.
+
+---
+
+## Fix variable and function names missed in FOLLOWUP Commit 4
+
+**What was done:** Completed the long descriptive names audit that was only partially done in FOLLOWUP Commit 4. Renamed all remaining short or non-descriptive variable and function names across the codebase. In lib: hash.go (`f`→`file`, `r`→`reader`, `n`→`bytesRead`, `buf`→`fullBuffer`, `hash`→`hashDigest`, `sum`→`xxSum64`/`shaDigest`/`md5Digest`); walk.go (`d`→`dirEntry`); walk_linux.go (`f`→`dirFile`, `e`→`entry`); output.go (`i,j`→`idx,jdx`, `partIdx` for loop index, `enc`→`encoder`); compare.go (`i`→`workerIdx`, `n`→`numWorkers`); logger.go (receiver `l`→`logger`, `err`→`closeError` in Close, `f`→`file` in IsTTY); path.go (receiver `p`→`pool`, `ok`→`found`); discover.go (receiver `s`→`discoveredSet`, `sd`→`side`). In main.go: `progress`→`progressCounts`, `p`→`progressCounts` in progressLoop, `proc`/`enq`→`processedCount`/`enqueuedCount`, `startNano`→`startTimeNano`. In all lib and main test files: short names such as `s`→`set`, `f`→`filePath`/`outFile`/`fileName`, `h`→`hash`, `ha`/`hb`→`hashA`/`hashB`, `a`/`b`→`firstInterned`/`secondInterned`, `e`→`entry`, `fi`→`fileInfo`, `ents`→`entries`, `pairs`→`pairsCount`, `same`→`duplicateHash`, `out`→`output`.
+
+**Why:** Commit 4 was intended to make all variable and function names long and descriptive; several identifiers (including idiomatic short names and test locals) were left unchanged. This pass fixes those omissions.
+
+**What it accomplishes:** Every variable and function name in the project is now long and descriptive; build and all unit and smoke tests pass.

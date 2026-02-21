@@ -43,55 +43,55 @@ func NewLogger() (*Logger, error) {
 	return &Logger{tempDir: tmp, mainPath: mainPath, errorPath: errorPath, mainFile: mainFile, errorFile: errorFile}, nil
 }
 
-func (l *Logger) TempDir() string { return l.tempDir }
+func (logger *Logger) TempDir() string { return logger.tempDir }
 
-func (l *Logger) Log(msg string) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	if l.mainFile != nil {
-		fmt.Fprintln(l.mainFile, msg)
-		l.mainFile.Sync()
+func (logger *Logger) Log(msg string) {
+	logger.mu.Lock()
+	defer logger.mu.Unlock()
+	if logger.mainFile != nil {
+		fmt.Fprintln(logger.mainFile, msg)
+		logger.mainFile.Sync()
 	}
 }
 
-func (l *Logger) LogError(err error) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	l.nonFatal++
-	if l.mainFile != nil {
-		fmt.Fprintln(l.mainFile, "error:", err.Error())
-		l.mainFile.Sync()
+func (logger *Logger) LogError(err error) {
+	logger.mu.Lock()
+	defer logger.mu.Unlock()
+	logger.nonFatal++
+	if logger.mainFile != nil {
+		fmt.Fprintln(logger.mainFile, "error:", err.Error())
+		logger.mainFile.Sync()
 	}
-	if l.errorFile != nil {
-		fmt.Fprintln(l.errorFile, err.Error())
-		l.errorFile.Sync()
+	if logger.errorFile != nil {
+		fmt.Fprintln(logger.errorFile, err.Error())
+		logger.errorFile.Sync()
 	}
 }
 
-func (l *Logger) Fatal(err error) {
-	l.mu.Lock()
+func (logger *Logger) Fatal(err error) {
+	logger.mu.Lock()
 	msg := err.Error()
-	if l.mainFile != nil {
-		fmt.Fprintln(l.mainFile, "fatal:", msg)
-		l.mainFile.Sync()
+	if logger.mainFile != nil {
+		fmt.Fprintln(logger.mainFile, "fatal:", msg)
+		logger.mainFile.Sync()
 	}
-	if l.errorFile != nil {
-		fmt.Fprintln(l.errorFile, msg)
-		l.errorFile.Sync()
+	if logger.errorFile != nil {
+		fmt.Fprintln(logger.errorFile, msg)
+		logger.errorFile.Sync()
 	}
-	l.mu.Unlock()
+	logger.mu.Unlock()
 	fmt.Fprintln(os.Stderr, msg)
 	os.Exit(FatalExitCode)
 }
 
-func (l *Logger) PrintLogPaths() {
+func (logger *Logger) PrintLogPaths() {
 	if !IsTTY(os.Stdout) {
 		return
 	}
-	l.mu.Lock()
-	mainPath := l.mainPath
-	errorPath := l.errorPath
-	l.mu.Unlock()
+	logger.mu.Lock()
+	mainPath := logger.mainPath
+	errorPath := logger.errorPath
+	logger.mu.Unlock()
 	if mainPath != "" {
 		fmt.Fprintln(os.Stderr, "Main log:", mainPath)
 	}
@@ -100,36 +100,36 @@ func (l *Logger) PrintLogPaths() {
 	}
 }
 
-func (l *Logger) NonFatalCount() int {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	return l.nonFatal
+func (logger *Logger) NonFatalCount() int {
+	logger.mu.Lock()
+	defer logger.mu.Unlock()
+	return logger.nonFatal
 }
 
-func (l *Logger) Close() error {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	var err error
-	if l.mainFile != nil {
-		if closeErr := l.mainFile.Close(); closeErr != nil && err == nil {
-			err = closeErr
+func (logger *Logger) Close() error {
+	logger.mu.Lock()
+	defer logger.mu.Unlock()
+	var closeError error
+	if logger.mainFile != nil {
+		if closeErr := logger.mainFile.Close(); closeErr != nil && closeError == nil {
+			closeError = closeErr
 		}
-		l.mainFile = nil
+		logger.mainFile = nil
 	}
-	if l.errorFile != nil {
-		if closeErr := l.errorFile.Close(); closeErr != nil && err == nil {
-			err = closeErr
+	if logger.errorFile != nil {
+		if closeErr := logger.errorFile.Close(); closeErr != nil && closeError == nil {
+			closeError = closeErr
 		}
-		l.errorFile = nil
+		logger.errorFile = nil
 	}
-	return err
+	return closeError
 }
 
-func IsTTY(f *os.File) bool {
-	if f == nil {
+func IsTTY(file *os.File) bool {
+	if file == nil {
 		return false
 	}
-	info, err := f.Stat()
+	info, err := file.Stat()
 	if err != nil {
 		return false
 	}

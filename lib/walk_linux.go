@@ -17,21 +17,21 @@ func walkTreeWithBatch(root string, batchSize int, fn func(rel string, isDir boo
 }
 
 func walkTreeBatched(absRoot, relDir, root string, batchSize int, fn func(rel string, isDir bool)) {
-	f, err := os.Open(absRoot)
+	dirFile, err := os.Open(absRoot)
 	if err != nil {
 		return
 	}
-	defer f.Close()
+	defer dirFile.Close()
 	for {
-		entries, err := f.Readdir(batchSize)
+		entries, err := dirFile.Readdir(batchSize)
 		if err != nil {
 			return
 		}
 		if len(entries) == 0 {
 			break
 		}
-		for _, e := range entries {
-			name := e.Name()
+		for _, entry := range entries {
+			name := entry.Name()
 			if name == "." || name == ".." {
 				continue
 			}
@@ -39,16 +39,16 @@ func walkTreeBatched(absRoot, relDir, root string, batchSize int, fn func(rel st
 			if relDir != "" {
 				relPath = filepath.Join(relDir, name)
 			}
-			if e.IsDir() {
+			if entry.IsDir() {
 				fn(relPath, true)
 				subAbs := filepath.Join(absRoot, name)
 				walkTreeBatched(subAbs, relPath, root, batchSize, fn)
 				continue
 			}
-			if e.Mode()&os.ModeSymlink != 0 {
+			if entry.Mode()&os.ModeSymlink != 0 {
 				continue
 			}
-			if e.Mode().IsRegular() {
+			if entry.Mode().IsRegular() {
 				fn(relPath, false)
 			}
 		}

@@ -17,16 +17,16 @@ func FormatTextTree(diffs []DiffResult, w *os.File) {
 	if len(diffs) == 0 {
 		return
 	}
-	sort.Slice(diffs, func(i, j int) bool { return diffs[i].Rel < diffs[j].Rel })
+	sort.Slice(diffs, func(idx, jdx int) bool { return diffs[idx].Rel < diffs[jdx].Rel })
 	seenDirs := make(map[string]bool)
 	for _, diff := range diffs {
 		parts := strings.Split(filepath.ToSlash(diff.Rel), "/")
-		for i := 1; i < len(parts); i++ {
-			prefix := strings.Join(parts[:i], "/")
+		for partIdx := 1; partIdx < len(parts); partIdx++ {
+			prefix := strings.Join(parts[:partIdx], "/")
 			if !seenDirs[prefix] {
 				seenDirs[prefix] = true
-				indent := strings.Repeat("  ", i-1)
-				fmt.Fprintf(w, "%s%s/\n", indent, parts[i-1])
+				indent := strings.Repeat("  ", partIdx-1)
+				fmt.Fprintf(w, "%s%s/\n", indent, parts[partIdx-1])
 			}
 		}
 		indent := strings.Repeat("  ", len(parts)-1)
@@ -48,7 +48,7 @@ func FormatTextTree(diffs []DiffResult, w *os.File) {
 
 // FormatTable writes diffs as tab-separated columns to w.
 func FormatTable(diffs []DiffResult, w *os.File) {
-	sort.Slice(diffs, func(i, j int) bool { return diffs[i].Rel < diffs[j].Rel })
+	sort.Slice(diffs, func(idx, jdx int) bool { return diffs[idx].Rel < diffs[jdx].Rel })
 	fmt.Fprintln(w, "path\tsize\tmtime\treason\thash")
 	for _, diff := range diffs {
 		mtimeStr := ""
@@ -61,7 +61,7 @@ func FormatTable(diffs []DiffResult, w *os.File) {
 
 // FormatJSON writes diffs as JSON array to w.
 func FormatJSON(diffs []DiffResult, w *os.File) {
-	sort.Slice(diffs, func(i, j int) bool { return diffs[i].Rel < diffs[j].Rel })
+	sort.Slice(diffs, func(idx, jdx int) bool { return diffs[idx].Rel < diffs[jdx].Rel })
 	type item struct {
 		Path   string `json:"path"`
 		Size   int64  `json:"size"`
@@ -77,14 +77,14 @@ func FormatJSON(diffs []DiffResult, w *os.File) {
 		}
 		items = append(items, item{diff.Rel, diff.Size, mtimeStr, diff.Reason, diff.Hash})
 	}
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	enc.Encode(items)
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", "  ")
+	encoder.Encode(items)
 }
 
 // FormatYAML writes diffs as YAML to w.
 func FormatYAML(diffs []DiffResult, w *os.File) {
-	sort.Slice(diffs, func(i, j int) bool { return diffs[i].Rel < diffs[j].Rel })
+	sort.Slice(diffs, func(idx, jdx int) bool { return diffs[idx].Rel < diffs[jdx].Rel })
 	type item struct {
 		Path   string `yaml:"path"`
 		Size   int64  `yaml:"size"`
@@ -100,6 +100,6 @@ func FormatYAML(diffs []DiffResult, w *os.File) {
 		}
 		items = append(items, item{diff.Rel, diff.Size, mtimeStr, diff.Reason, diff.Hash})
 	}
-	enc := yaml.NewEncoder(w)
-	enc.Encode(items)
+	encoder := yaml.NewEncoder(w)
+	encoder.Encode(items)
 }

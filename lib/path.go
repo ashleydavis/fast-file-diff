@@ -45,13 +45,13 @@ func NewPathPool() *PathPool {
 }
 
 // Intern returns the same string for equal inputs, deduplicating storage.
-func (p *PathPool) Intern(rel string) string {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	if cached, ok := p.seen[rel]; ok {
+func (pool *PathPool) Intern(rel string) string {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+	if cached, found := pool.seen[rel]; found {
 		return cached
 	}
-	p.seen[rel] = rel
+	pool.seen[rel] = rel
 	return rel
 }
 

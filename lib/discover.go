@@ -33,26 +33,26 @@ func NewDiscoveredSet(pool *PathPool) *DiscoveredSet {
 
 // Add records that rel was seen on the given side. It returns true when this
 // completes a pair (the other side had already been seen for rel).
-func (s *DiscoveredSet) Add(rel string, sd Side) bool {
-	rel = s.pool.Intern(filepath.Clean(filepath.ToSlash(rel)))
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	switch sd {
+func (discoveredSet *DiscoveredSet) Add(rel string, side Side) bool {
+	rel = discoveredSet.pool.Intern(filepath.Clean(filepath.ToSlash(rel)))
+	discoveredSet.mu.Lock()
+	defer discoveredSet.mu.Unlock()
+	switch side {
 	case SideLeft:
-		if s.right[rel] {
-			firstTime := !s.left[rel]
-			s.left[rel] = true
+		if discoveredSet.right[rel] {
+			firstTime := !discoveredSet.left[rel]
+			discoveredSet.left[rel] = true
 			return firstTime
 		}
-		s.left[rel] = true
+		discoveredSet.left[rel] = true
 		return false
 	case SideRight:
-		if s.left[rel] {
-			firstTime := !s.right[rel]
-			s.right[rel] = true
+		if discoveredSet.left[rel] {
+			firstTime := !discoveredSet.right[rel]
+			discoveredSet.right[rel] = true
 			return firstTime
 		}
-		s.right[rel] = true
+		discoveredSet.right[rel] = true
 		return false
 	default:
 		return false
@@ -60,12 +60,12 @@ func (s *DiscoveredSet) Add(rel string, sd Side) bool {
 }
 
 // LeftOnlyPaths returns relative paths that were seen on left but not on right.
-func (s *DiscoveredSet) LeftOnlyPaths() []string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (discoveredSet *DiscoveredSet) LeftOnlyPaths() []string {
+	discoveredSet.mu.Lock()
+	defer discoveredSet.mu.Unlock()
 	var out []string
-	for rel := range s.left {
-		if !s.right[rel] {
+	for rel := range discoveredSet.left {
+		if !discoveredSet.right[rel] {
 			out = append(out, rel)
 		}
 	}
@@ -73,12 +73,12 @@ func (s *DiscoveredSet) LeftOnlyPaths() []string {
 }
 
 // RightOnlyPaths returns relative paths that were seen on right but not on left.
-func (s *DiscoveredSet) RightOnlyPaths() []string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (discoveredSet *DiscoveredSet) RightOnlyPaths() []string {
+	discoveredSet.mu.Lock()
+	defer discoveredSet.mu.Unlock()
 	var out []string
-	for rel := range s.right {
-		if !s.left[rel] {
+	for rel := range discoveredSet.right {
+		if !discoveredSet.left[rel] {
 			out = append(out, rel)
 		}
 	}

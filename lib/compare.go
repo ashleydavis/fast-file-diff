@@ -59,11 +59,11 @@ func comparePair(leftRoot, rightRoot, rel, hashAlg string, threshold int) (diffe
 	return true, "content differs", leftHash, leftInfo.Size(), leftModTime
 }
 
-// RunWorkers starts n workers that read from pairCh, compare each pair, and send to resultCh.
-func RunWorkers(leftRoot, rightRoot string, n int, hashAlg string, threshold int, pairCh <-chan string, resultCh chan<- DiffResult, progress *ProgressCounts) {
-	workCh := make(chan string, n*2)
+// RunWorkers starts numWorkers workers that read from pairCh, compare each pair, and send to resultCh.
+func RunWorkers(leftRoot, rightRoot string, numWorkers int, hashAlg string, threshold int, pairCh <-chan string, resultCh chan<- DiffResult, progress *ProgressCounts) {
+	workCh := make(chan string, numWorkers*2)
 	var wg sync.WaitGroup
-	for i := 0; i < n; i++ {
+	for workerIdx := 0; workerIdx < numWorkers; workerIdx++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

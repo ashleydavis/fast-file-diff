@@ -38,8 +38,8 @@ func TestWalkTree_collectsRelativePaths(t *testing.T) {
 		t.Errorf("expected 3 files, got %v", files)
 	}
 	hasHidden := false
-	for _, f := range files {
-		if filepath.Base(f) == ".hidden" {
+	for _, fileName := range files {
+		if filepath.Base(fileName) == ".hidden" {
 			hasHidden = true
 			break
 		}

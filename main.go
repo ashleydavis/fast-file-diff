@@ -86,12 +86,12 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	set := lib.NewDiscoveredSet(pool)
 	pairCh := make(chan string, pairQueueCap)
 	resultCh := make(chan lib.DiffResult, 256)
-	progress := &lib.ProgressCounts{}
+	progressCounts := &lib.ProgressCounts{}
 	go lib.WalkBothTrees(left, right, dirBatchSize, logger, set, pairCh)
-	lib.RunWorkers(left, right, numWorkers, hashAlg, hashThreshold, pairCh, resultCh, progress)
+	lib.RunWorkers(left, right, numWorkers, hashAlg, hashThreshold, pairCh, resultCh, progressCounts)
 	doneCh := make(chan struct{})
 	if !quiet && lib.IsTTY(os.Stderr) {
-		go progressLoop(progress, doneCh)
+		go progressLoop(progressCounts, doneCh)
 	}
 	var diffs []lib.DiffResult
 	for diffResult := range resultCh {
@@ -146,7 +146,7 @@ func estimateRemainingDuration(processed, pending int32, startTimeUnixNano int64
 	return estimateRemainingFromElapsed(elapsed, processed, pending)
 }
 
-func progressLoop(p *lib.ProgressCounts, doneCh <-chan struct{}) {
+func progressLoop(progressCounts *lib.ProgressCounts, doneCh <-chan struct{}) {
 	tick := time.NewTicker(100 * time.Millisecond)
 	defer tick.Stop()
 	for {
@@ -154,18 +154,18 @@ func progressLoop(p *lib.ProgressCounts, doneCh <-chan struct{}) {
 		case <-doneCh:
 			return
 		case <-tick.C:
-			proc := atomic.LoadInt32(&p.Processed)
-			enq := atomic.LoadInt32(&p.Enqueued)
-			pending := enq - proc
-			if enq == 0 && proc == 0 {
+			processedCount := atomic.LoadInt32(&progressCounts.Processed)
+			enqueuedCount := atomic.LoadInt32(&progressCounts.Enqueued)
+			pending := enqueuedCount - processedCount
+			if enqueuedCount == 0 && processedCount == 0 {
 				continue
 			}
-			startNano := atomic.LoadInt64(&p.StartTimeUnixNano)
-			remaining := estimateRemainingDuration(proc, pending, startNano)
+			startTimeNano := atomic.LoadInt64(&progressCounts.StartTimeUnixNano)
+			remaining := estimateRemainingDuration(processedCount, pending, startTimeNano)
 			if remaining > 0 {
-				fmt.Fprintf(os.Stderr, "\rprocessed %d, pending %d, ~%s remaining   ", proc, pending, remaining.Round(time.Second))
+				fmt.Fprintf(os.Stderr, "\rprocessed %d, pending %d, ~%s remaining   ", processedCount, pending, remaining.Round(time.Second))
 			} else {
-				fmt.Fprintf(os.Stderr, "\rprocessed %d, pending %d   ", proc, pending)
+				fmt.Fprintf(os.Stderr, "\rprocessed %d, pending %d   ", processedCount, pending)
 			}
 		}
 	}

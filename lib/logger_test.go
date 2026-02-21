@@ -16,13 +16,13 @@ func TestNewLogger_createsLogFiles(t *testing.T) {
 	if logger.TempDir() == "" {
 		t.Error("TempDir() is empty")
 	}
-	fi, err := os.Stat(logger.TempDir())
-	if err != nil || !fi.IsDir() {
+	fileInfo, err := os.Stat(logger.TempDir())
+	if err != nil || !fileInfo.IsDir() {
 		t.Errorf("temp dir missing or not dir: %v", err)
 	}
-	ents, _ := os.ReadDir(logger.TempDir())
-	if len(ents) < 2 {
-		t.Errorf("expected at least 2 files in temp dir, got %d", len(ents))
+	entries, _ := os.ReadDir(logger.TempDir())
+	if len(entries) < 2 {
+		t.Errorf("expected at least 2 files in temp dir, got %d", len(entries))
 	}
 }
 
@@ -31,10 +31,10 @@ func TestLogger_Log_writesToMainOnly(t *testing.T) {
 	defer logger.Close()
 	msg := "test main log line"
 	logger.Log(msg)
-	ents, _ := os.ReadDir(logger.TempDir())
-	for _, e := range ents {
-		if strings.Contains(e.Name(), "main") && !e.IsDir() {
-			data, _ := os.ReadFile(filepath.Join(logger.TempDir(), e.Name()))
+	entries, _ := os.ReadDir(logger.TempDir())
+	for _, entry := range entries {
+		if strings.Contains(entry.Name(), "main") && !entry.IsDir() {
+			data, _ := os.ReadFile(filepath.Join(logger.TempDir(), entry.Name()))
 			if !strings.Contains(string(data), msg) {
 				t.Errorf("main log does not contain %q", msg)
 			}
