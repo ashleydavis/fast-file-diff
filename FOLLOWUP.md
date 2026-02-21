@@ -21,7 +21,7 @@ This document lists follow-up commits in order. Each commit is a single, buildab
 
 **Progress:** Mark the current commit below (e.g. set "Next: Commit N") and check off commits as you complete them (`[x]`).
 
-- **Next:** Commit 8 (README quick start)
+- **Next:** Commit 9 (final verification)
 
 **Final step:** Commit 9 verifies build, all tests, and README completeness before closing the plan.
 
@@ -118,7 +118,7 @@ This document lists follow-up commits in order. Each commit is a single, buildab
 
 ---
 
-## - [ ] Commit 8: README quick start section
+## - [x] Commit 8: README quick start section
 
 **Message:** Add quick start section to README
 

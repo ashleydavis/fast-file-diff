@@ -285,3 +285,13 @@ Test data lives under `test/` (e.g. `five-same-left`, `five-same-right`, `five-o
 **Why:** The follow-up plan required that all library code live under lib/ and only the CLI entrypoint remain in the project root for a clear separation of concerns.
 
 **What it accomplishes:** Project root holds only the CLI (main.go); all reusable logic is in lib/ with full unit tests; `go build .` and `go test ./...` and `./check.sh` pass.
+
+---
+
+## FOLLOWUP Commit 8: README quick start section
+
+**What was done:** Added a "Quick start" section to README.md after the opening description. It shows how to build (`./build.sh`) and run a diff (`./bin/ffd /path/to/left /path/to/right`), mentions `./bin/ffd --help` for options, and links to the "Using the CLI" section for full details.
+
+**Why:** The follow-up plan required a short quick start so new users can run a diff in under a minute.
+
+**What it accomplishes:** New users see build and example commands at a glance; the full CLI section remains the single place for detailed usage.

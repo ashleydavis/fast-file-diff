@@ -2,6 +2,17 @@
 
 A fast CLI that reports which files differ between two directories (by path and content), optimized for speed on large trees.
 
+## Quick start
+
+Build and run a diff in under a minute:
+
+```bash
+./build.sh
+./bin/ffd /path/to/left /path/to/right
+```
+
+Run `./bin/ffd --help` for options (formats, hash algorithm, workers). See [Using the CLI](#using-the-cli) for details.
+
 ## Scripts
 
 | Script | Purpose |
