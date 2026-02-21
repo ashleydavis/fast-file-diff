@@ -57,10 +57,16 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	}
 	defer logger.Close()
 	defer logger.PrintLogPaths()
-	_ = left
-	_ = right
 	logger.Log("started comparison")
-	// No diff logic yet; exit after validation.
+	walkTree(left, func(rel string, isDir bool) {
+		if isDir {
+			logger.Log("dir: " + rel)
+		} else {
+			logger.Log("file: " + rel)
+		}
+	})
+	_ = right
+	// No diff logic yet; single tree walk and log only.
 	return nil
 }
 
