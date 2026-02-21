@@ -1,7 +1,6 @@
 package lib
 
 import (
-	"os"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -31,27 +30,13 @@ type ProgressCounts struct {
 func comparePair(leftRoot, rightRoot, rel, hashAlg string, threshold int, cached *PairInfo) (different bool, reason string, hashStr string, size int64, mtime time.Time) {
 	leftPath := filepath.Join(leftRoot, rel)
 	rightPath := filepath.Join(rightRoot, rel)
-	var leftSize, rightSize int64
-	var leftModTime, rightModTime time.Time
-	if cached != nil {
-		leftSize = cached.LeftSize
-		rightSize = cached.RightSize
-		leftModTime = cached.LeftMtime
-		rightModTime = cached.RightMtime
-	} else {
-		leftInfo, err := os.Stat(leftPath)
-		if err != nil {
-			return true, "stat left: " + err.Error(), "", 0, time.Time{}
-		}
-		rightInfo, err := os.Stat(rightPath)
-		if err != nil {
-			return true, "stat right: " + err.Error(), "", 0, time.Time{}
-		}
-		leftSize = leftInfo.Size()
-		rightSize = rightInfo.Size()
-		leftModTime = leftInfo.ModTime().Truncate(time.Second)
-		rightModTime = rightInfo.ModTime().Truncate(time.Second)
+	if cached == nil {
+		panic("comparePair: missing file info (cached is nil); discovery walk must provide PairInfo for every pair")
 	}
+	leftSize := cached.LeftSize
+	rightSize := cached.RightSize
+	leftModTime := cached.LeftMtime
+	rightModTime := cached.RightMtime
 	if leftSize != rightSize {
 		return true, "size changed", "", leftSize, leftModTime
 	}
