@@ -45,8 +45,8 @@ func newPathPool() *pathPool {
 func (p *pathPool) Intern(rel string) string {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if s, ok := p.seen[rel]; ok {
-		return s
+	if cached, ok := p.seen[rel]; ok {
+		return cached
 	}
 	p.seen[rel] = rel
 	return rel

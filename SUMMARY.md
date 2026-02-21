@@ -245,3 +245,13 @@ Test data lives under `test/` (e.g. `five-same-left`, `five-same-right`, `five-o
 **Why:** The follow-up plan required a script to check for vulnerabilities and document findings in a single place (VULNERABILITIES.md).
 
 **What it accomplishes:** Users and developers can run one script to refresh the vulnerability report; results are in VULNERABILITIES.md for audit or CI.
+
+---
+
+## FOLLOWUP Commit 4: Long descriptive names audit
+
+**What was done:** Audited Go code and renamed short or cryptic variables and identifiers to long, descriptive names: in main.go `r` → `diffResult`; in compare.go `li`/`ri` → `leftInfo`/`rightInfo`, `lm`/`rm` → `leftModTime`/`rightModTime`, `hL`/`hR` → `leftHash`/`rightHash`; in output.go `d` → `diff`, `mt` → `mtimeStr` in all format functions; in hash.go `b` → `buffer`/`readBuffer`, `h` → `hasher`/`sum64`; in path.go `s` → `cached` in Intern; in logger.go `e` → `closeErr` in Close. No behavior change; only renames.
+
+**Why:** The follow-up plan required that all variable, function, and file names be long and descriptive for readability and maintainability.
+
+**What it accomplishes:** Code is easier to read and maintain; no new tests required (behavior unchanged); build and all tests pass.

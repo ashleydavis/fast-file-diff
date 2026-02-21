@@ -94,9 +94,9 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		go progressLoop(progress, doneCh)
 	}
 	var diffs []DiffResult
-	for r := range resultCh {
-		diffs = append(diffs, r)
-		logger.Log("diff: " + r.Rel + " " + r.Reason)
+	for diffResult := range resultCh {
+		diffs = append(diffs, diffResult)
+		logger.Log("diff: " + diffResult.Rel + " " + diffResult.Reason)
 	}
 	close(doneCh)
 	for _, rel := range set.LeftOnlyPaths() {

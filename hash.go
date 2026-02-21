@@ -34,8 +34,8 @@ func hashFile(path, algorithm string, threshold int) (string, error) {
 
 var bufPool = sync.Pool{
 	New: func() interface{} {
-		b := make([]byte, 10*1024*1024)
-		return &b
+		buffer := make([]byte, 10*1024*1024)
+		return &buffer
 	},
 }
 
@@ -53,17 +53,17 @@ func hashStream(r io.Reader, algorithm string, bufSize int) (string, error) {
 	if cap(*buf) < bufSize {
 		*buf = make([]byte, bufSize)
 	}
-	b := (*buf)[:bufSize]
+	readBuffer := (*buf)[:bufSize]
 	switch algorithm {
 		case "xxhash":
-		h := xxhash.New()
+		hasher := xxhash.New()
 		for {
-			n, err := r.Read(b)
+			n, err := r.Read(readBuffer)
 			if n > 0 {
-				h.Write(b[:n])
+				hasher.Write(readBuffer[:n])
 			}
 			if err == io.EOF {
-				return fmt.Sprintf("%016x", h.Sum64()), nil
+				return fmt.Sprintf("%016x", hasher.Sum64()), nil
 			}
 			if err != nil {
 				return "", err
@@ -72,9 +72,9 @@ func hashStream(r io.Reader, algorithm string, bufSize int) (string, error) {
 	case "sha256":
 		hash := sha256.New()
 		for {
-			n, err := r.Read(b)
+			n, err := r.Read(readBuffer)
 			if n > 0 {
-				hash.Write(b[:n])
+				hash.Write(readBuffer[:n])
 			}
 			if err == io.EOF {
 				return hex.EncodeToString(hash.Sum(nil)), nil
@@ -86,9 +86,9 @@ func hashStream(r io.Reader, algorithm string, bufSize int) (string, error) {
 	case "md5":
 		hash := md5.New()
 		for {
-			n, err := r.Read(b)
+			n, err := r.Read(readBuffer)
 			if n > 0 {
-				hash.Write(b[:n])
+				hash.Write(readBuffer[:n])
 			}
 			if err == io.EOF {
 				return hex.EncodeToString(hash.Sum(nil)), nil
@@ -105,8 +105,8 @@ func hashStream(r io.Reader, algorithm string, bufSize int) (string, error) {
 func hashBytes(data []byte, algorithm string) (string, error) {
 	switch algorithm {
 	case "xxhash":
-		h := xxhash.Sum64(data)
-		return fmt.Sprintf("%016x", h), nil
+		sum64 := xxhash.Sum64(data)
+		return fmt.Sprintf("%016x", sum64), nil
 	case "sha256":
 		sum := sha256.Sum256(data)
 		return hex.EncodeToString(sum[:]), nil

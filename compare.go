@@ -22,34 +22,34 @@ type DiffResult struct {
 func comparePair(leftRoot, rightRoot, rel, hashAlg string, threshold int) (different bool, reason string, hashStr string, size int64, mtime time.Time) {
 	leftPath := filepath.Join(leftRoot, rel)
 	rightPath := filepath.Join(rightRoot, rel)
-	li, err := os.Stat(leftPath)
+	leftInfo, err := os.Stat(leftPath)
 	if err != nil {
 		return true, "stat left: " + err.Error(), "", 0, time.Time{}
 	}
-	ri, err := os.Stat(rightPath)
+	rightInfo, err := os.Stat(rightPath)
 	if err != nil {
 		return true, "stat right: " + err.Error(), "", 0, time.Time{}
 	}
-	if li.Size() != ri.Size() {
-		return true, "size changed", "", li.Size(), li.ModTime().Truncate(time.Second)
+	if leftInfo.Size() != rightInfo.Size() {
+		return true, "size changed", "", leftInfo.Size(), leftInfo.ModTime().Truncate(time.Second)
 	}
-	lm := li.ModTime().Truncate(time.Second)
-	rm := ri.ModTime().Truncate(time.Second)
-	if lm.Equal(rm) {
+	leftModTime := leftInfo.ModTime().Truncate(time.Second)
+	rightModTime := rightInfo.ModTime().Truncate(time.Second)
+	if leftModTime.Equal(rightModTime) {
 		return false, "", "", 0, time.Time{}
 	}
-	hL, err := hashFile(leftPath, hashAlg, threshold)
+	leftHash, err := hashFile(leftPath, hashAlg, threshold)
 	if err != nil {
-		return true, "hash left: " + err.Error(), "", li.Size(), lm
+		return true, "hash left: " + err.Error(), "", leftInfo.Size(), leftModTime
 	}
-	hR, err := hashFile(rightPath, hashAlg, threshold)
+	rightHash, err := hashFile(rightPath, hashAlg, threshold)
 	if err != nil {
-		return true, "hash right: " + err.Error(), "", li.Size(), lm
+		return true, "hash right: " + err.Error(), "", leftInfo.Size(), leftModTime
 	}
-	if hL == hR {
+	if leftHash == rightHash {
 		return false, "", "", 0, time.Time{}
 	}
-	return true, "content differs", hL, li.Size(), lm
+	return true, "content differs", leftHash, leftInfo.Size(), leftModTime
 }
 
 // runWorkers starts n workers that read from pairCh, compare each pair, and send to resultCh.

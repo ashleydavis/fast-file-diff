@@ -126,14 +126,14 @@ func (l *Logger) Close() error {
 	defer l.mu.Unlock()
 	var err error
 	if l.mainFile != nil {
-		if e := l.mainFile.Close(); e != nil && err == nil {
-			err = e
+		if closeErr := l.mainFile.Close(); closeErr != nil && err == nil {
+			err = closeErr
 		}
 		l.mainFile = nil
 	}
 	if l.errorFile != nil {
-		if e := l.errorFile.Close(); e != nil && err == nil {
-			err = e
+		if closeErr := l.errorFile.Close(); closeErr != nil && err == nil {
+			err = closeErr
 		}
 		l.errorFile = nil
 	}
