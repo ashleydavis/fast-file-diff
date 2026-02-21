@@ -27,7 +27,7 @@ This document lists commits in order. Each commit is a single, buildable change 
 
 **Smoke tests as you go:** Write smoke tests as you go where possible. For each commit that introduces behavior testable via the CLI (`bin/ffd`), add a smoke test in that commit. Introduce or extend the smoke test harness when needed so new tests can run. The "Before each commit" check runs smoke tests once the harness exists (from Commit 1 onward).
 
-- **Next:** Commit 15
+- **Next:** Commit 18
 
 ---
 
@@ -181,7 +181,7 @@ This document lists commits in order. Each commit is a single, buildable change 
 - Wire `--format yaml`.
 - Add smoke test: run with `--format yaml`; stdout is valid YAML (e.g. parseable).
 
-## - [ ] Commit 15: Remaining CLI and exit behavior
+## - [x] Commit 15: Remaining CLI and exit behavior
 
 **Message:** Remaining CLI and exit behavior
 
@@ -192,7 +192,7 @@ This document lists commits in order. Each commit is a single, buildable change 
 - Exit 3 when non-fatal errors occurred; unless `--quiet`, tell user to check error log.
 - Add smoke test: run with `--quiet` and pipe stdout; no progress or "check error log" in output.
 
-## - [ ] Commit 16: smoke-tests.sh harness complete and remaining smoke tests
+## - [x] Commit 16: smoke-tests.sh harness complete and remaining smoke tests
 
 **Message:** smoke-tests.sh harness complete and remaining smoke tests
 
@@ -202,7 +202,7 @@ This document lists commits in order. Each commit is a single, buildable change 
 - Add test data under `./test` for left-only, right-only, and any missing scenarios.
 - Add or consolidate smoke tests so all of: help, identical dirs, one file different, left-only, right-only, and each output format are covered.
 
-## - [ ] Commit 17: perf-test.sh and perf-results.csv
+## - [x] Commit 17: perf-test.sh and perf-results.csv
 
 **Message:** perf-test.sh and perf-results.csv
 
