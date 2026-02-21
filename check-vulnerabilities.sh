@@ -24,18 +24,19 @@ DATE_ISO=$(date -Iseconds)
   echo ""
   echo "## govulncheck ./..."
   echo ""
-  if command -v govulncheck >/dev/null 2>&1; then
-    if govulncheck ./... 2>&1; then
-      echo ""
-      echo "Result: No known vulnerabilities reported."
+  run_govulncheck() {
+    if command -v govulncheck >/dev/null 2>&1; then
+      govulncheck ./... 2>&1
     else
-      echo ""
-      echo "Result: One or more vulnerabilities may be present. Review output above."
+      go run golang.org/x/vuln/cmd/govulncheck@latest ./... 2>&1
     fi
-  else
-    echo "govulncheck is not installed. Install with: go install golang.org/x/vuln/cmd/govulncheck@latest"
+  }
+  if run_govulncheck; then
     echo ""
-    echo "Result: Skipped (tool not available)."
+    echo "Result: No known vulnerabilities reported."
+  else
+    echo ""
+    echo "Result: One or more vulnerabilities may be present. Review output above."
   fi
 } > "$VULN_DOC"
 
