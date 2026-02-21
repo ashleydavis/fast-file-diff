@@ -27,6 +27,8 @@ type ProgressCounts struct {
 	TotalPairs        int32
 }
 
+// comparePair hashes both files and compares hashes. Caller must have already checked size and mtime
+// (same size, different mtime); only such pairs should be sent to workers. cached must be non-nil.
 func comparePair(leftRoot, rightRoot, relativePath string, hashAlg string, threshold int, cached *PairInfo) (different bool, reason string, hashStr string, size int64, mtime time.Time) {
 	leftPath := filepath.Join(leftRoot, relativePath)
 	rightPath := filepath.Join(rightRoot, relativePath)
@@ -34,15 +36,7 @@ func comparePair(leftRoot, rightRoot, relativePath string, hashAlg string, thres
 		panic("comparePair: missing file info (cached is nil); discovery walk must provide PairInfo for every pair")
 	}
 	leftSize := cached.LeftSize
-	rightSize := cached.RightSize
 	leftModTime := cached.LeftMtime
-	rightModTime := cached.RightMtime
-	if leftSize != rightSize {
-		return true, "size changed", "", leftSize, leftModTime
-	}
-	if leftModTime.Equal(rightModTime) {
-		return false, "", "", 0, time.Time{}
-	}
 	leftHash, err := hashFile(leftPath, hashAlg, threshold)
 	if err != nil {
 		return true, "hash left: " + err.Error(), "", leftSize, leftModTime

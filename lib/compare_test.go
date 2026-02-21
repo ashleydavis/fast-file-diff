@@ -23,23 +23,7 @@ func TestComparePair_sameFile(t *testing.T) {
 	}
 }
 
-func TestComparePair_differentSize(t *testing.T) {
-	root := t.TempDir()
-	left := filepath.Join(root, "left")
-	right := filepath.Join(root, "right")
-	os.MkdirAll(left, 0755)
-	os.MkdirAll(right, 0755)
-	os.WriteFile(filepath.Join(left, "f"), []byte("a"), 0644)
-	os.WriteFile(filepath.Join(right, "f"), []byte("ab"), 0644)
-	cached := mustPairInfo(t, left, right, "f")
-	diff, reason, _, _, _ := comparePair(left, right, "f", "xxhash", 10<<20, cached)
-	if !diff {
-		t.Error("comparePair(different size) = false")
-	}
-	if reason != "size changed" {
-		t.Errorf("reason = %q, want size changed", reason)
-	}
-}
+// Size comparison is done in main before enqueueing; comparePair only hashes and compares hashes.
 
 func TestComparePair_sameSizeDifferentMtime(t *testing.T) {
 	root := t.TempDir()

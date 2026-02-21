@@ -95,14 +95,28 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	<-walkDoneCh
 
 	pairPaths := set.PairPaths()
-	progressCounts.TotalPairs = int32(len(pairPaths))
+	totalCompared := len(pairPaths)
 
-	// Phase 2: compare all pairs; workers read from pairCh (with cached size/mtime when available).
-	pairJobs := make([]lib.PairJob, 0, len(pairPaths))
+	// Cheap comparisons (size, mtime) outside workers; only pairs that need hashing go to workers.
+	var diffs []lib.DiffResult
+	var pairJobs []lib.PairJob
 	for _, rel := range pairPaths {
-		cached, _ := set.PairCachedInfo(rel)
+		cached, ok := set.PairCachedInfo(rel)
+		if !ok || cached == nil {
+			continue
+		}
+		if cached.LeftSize != cached.RightSize {
+			diffs = append(diffs, lib.DiffResult{Rel: rel, Reason: "size changed", Size: cached.LeftSize, Mtime: cached.LeftMtime})
+			logger.Log("diff: " + rel + " size changed")
+			continue
+		}
+		if cached.LeftMtime.Equal(cached.RightMtime) {
+			continue // same file, no hash needed
+		}
 		pairJobs = append(pairJobs, lib.PairJob{Rel: rel, Cached: cached})
 	}
+	progressCounts.TotalPairs = int32(len(pairJobs))
+
 	pairCh := make(chan lib.PairJob, len(pairJobs)+1)
 	go func() {
 		for _, job := range pairJobs {
@@ -116,14 +130,12 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	if !quiet && lib.IsTTY(os.Stderr) {
 		go progressLoop(progressCounts, compareDoneCh, numWorkers)
 	}
-	var diffs []lib.DiffResult
 	for diffResult := range resultCh {
 		diffs = append(diffs, diffResult)
 		logger.Log("diff: " + diffResult.Rel + " " + diffResult.Reason)
 	}
 	close(compareDoneCh)
 	differentCount := len(diffs)
-	totalCompared := len(pairPaths)
 	sameCount := totalCompared - differentCount
 	if sameCount < 0 {
 		sameCount = 0
