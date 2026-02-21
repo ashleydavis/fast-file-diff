@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestComparePair_sameFile(t *testing.T) {
@@ -43,5 +44,28 @@ func TestComparePair_differentSize(t *testing.T) {
 	}
 	if reason != "size changed" {
 		t.Errorf("reason = %q, want size changed", reason)
+	}
+}
+
+func TestComparePair_sameSizeDifferentMtime(t *testing.T) {
+	root := t.TempDir()
+	left := filepath.Join(root, "left")
+	right := filepath.Join(root, "right")
+	os.MkdirAll(left, 0755)
+	os.MkdirAll(right, 0755)
+	content := []byte("xx")
+	os.WriteFile(filepath.Join(left, "f"), content, 0644)
+	os.WriteFile(filepath.Join(right, "f"), content, 0644)
+	// Change mtime of right file
+	p := filepath.Join(right, "f")
+	if err := os.Chtimes(p, time.Now().Add(-time.Hour), time.Now().Add(-time.Hour)); err != nil {
+		t.Skip("Chtimes not supported")
+	}
+	diff, reason := comparePair(left, right, "f")
+	if !diff {
+		t.Error("comparePair(same size, different mtime) = false; want different")
+	}
+	if reason != "mtime differs" {
+		t.Errorf("reason = %q, want mtime differs", reason)
 	}
 }
