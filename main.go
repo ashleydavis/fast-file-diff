@@ -99,6 +99,8 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		formatTable(diffs, os.Stdout)
 	case "json":
 		formatJSON(diffs, os.Stdout)
+	case "yaml":
+		formatYAML(diffs, os.Stdout)
 	default:
 		formatTextTree(diffs, os.Stdout)
 	}
