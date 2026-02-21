@@ -26,9 +26,9 @@ DATE_ISO=$(date -Iseconds)
   echo ""
   run_govulncheck() {
     if command -v govulncheck >/dev/null 2>&1; then
-      govulncheck ./... 2>&1
+      govulncheck -show verbose ./... 2>&1
     else
-      go run golang.org/x/vuln/cmd/govulncheck@latest ./... 2>&1
+      go run golang.org/x/vuln/cmd/govulncheck@latest -show verbose ./... 2>&1
     fi
   }
   if run_govulncheck; then
@@ -38,6 +38,11 @@ DATE_ISO=$(date -Iseconds)
     echo ""
     echo "Result: One or more vulnerabilities may be present. Review output above."
   fi
+  echo ""
+  echo "## Remediation"
+  echo ""
+  echo "- **Go standard library:** If the report lists vulnerabilities in \`stdlib\` or packages like \`net/url\`, \`archive/zip\`, \`crypto/tls\`, upgrade the Go toolchain to the version shown in \"Fixed in\" (see \`go.mod\` \`toolchain\` directive). You cannot remove the standard library."
+  echo "- **Third-party modules:** Run \`go get -u ./...\` or \`go get -u module@version\` to update to fixed versions, or remove the dependency if unused."
 } > "$VULN_DOC"
 
 echo "Wrote $VULN_DOC"

@@ -1,6 +1,6 @@
 # Vulnerability check report
 
-**Date:** 2026-02-22T08:44:28+10:00
+**Date:** 2026-02-22T08:47:37+10:00
 
 ## go mod verify
 
@@ -10,18 +10,25 @@ Result: OK
 
 ## govulncheck ./...
 
-go: downloading golang.org/x/telemetry v0.0.0-20240522233618-39ace7a40ae7
-go: downloading golang.org/x/tools v0.29.0
-go: downloading golang.org/x/sync v0.10.0
-go: downloading golang.org/x/mod v0.22.0
-=== Symbol Results ===
+Fetching vulnerabilities from the database...
+
+Checking the code against the vulnerabilities...
+
+The package pattern matched the following 2 root packages:
+  github.com/photosphere/fast-file-diff-go/lib
+  github.com/photosphere/fast-file-diff-go
+Govulncheck scanned the following 5 modules and the go1.25.7 standard library:
+  github.com/photosphere/fast-file-diff-go
+  github.com/cespare/xxhash/v2@v2.3.0
+  github.com/spf13/cobra@v1.10.2
+  github.com/spf13/pflag@v1.0.9
+  gopkg.in/yaml.v3@v3.0.1
 
 No vulnerabilities found.
 
-Your code is affected by 0 vulnerabilities.
-This scan also found 1 vulnerability in packages you import and 3
-vulnerabilities in modules you require, but your code doesn't appear to call
-these vulnerabilities.
-Use '-show verbose' for more details.
-
 Result: No known vulnerabilities reported.
+
+## Remediation
+
+- **Go standard library:** If the report lists vulnerabilities in `stdlib` or packages like `net/url`, `archive/zip`, `crypto/tls`, upgrade the Go toolchain to the version shown in "Fixed in" (see `go.mod` `toolchain` directive). You cannot remove the standard library.
+- **Third-party modules:** Run `go get -u ./...` or `go get -u module@version` to update to fixed versions, or remove the dependency if unused.
