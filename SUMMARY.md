@@ -345,3 +345,13 @@ Test data lives under `test/` (e.g. `five-same-left`, `five-same-right`, `five-o
 **Why:** Stating each file twice per pair (left and right) during compare was redundant when the walk had already seen those files; caching size and mtime during the walk avoids two stats per pair in the compare phase.
 
 **What it accomplishes:** Compare phase does no stat for size/mtime when cache is present; build and all unit and smoke tests pass.
+
+---
+
+## Worker-pool directory walk
+
+**What was done:** Replaced the two-goroutine (one per tree) sequential walk with a worker-pool that shares a queue of directories to scan. Queue is seeded with the left and right roots. Each worker takes a dirJob (root, relDir, side) from the channel, lists the directory via listDirEntries (os.ReadDir + Info() for files), adds files to DiscoveredSet with size/mtime, logs dir/file, and enqueues subdirectories. When the channel is full a worker processes a subdir inline to avoid deadlock. WalkBothTrees now takes numWalkWorkers (main passes numWorkers); jobWg tracks pending dirs, workerWg tracks workers; when jobWg reaches zero the dir channel is closed and doneCh is closed after workers drain. walkTreePortable and walkTree remain for tests.
+
+**Why:** The previous walk used only two goroutines (one per tree); a shared queue and multiple workers allow more concurrent directory reads and can speed up discovery on large trees.
+
+**What it accomplishes:** Discovery phase uses numWorkers concurrent directory scanners; build and all unit and smoke tests pass.

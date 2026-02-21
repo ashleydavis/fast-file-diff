@@ -87,7 +87,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 
 	// Phase 1: discover all file pairs by walking both trees.
 	walkDoneCh := make(chan struct{})
-	go lib.WalkBothTrees(left, right, dirBatchSize, logger, set, walkDoneCh)
+	go lib.WalkBothTrees(left, right, dirBatchSize, numWorkers, logger, set, walkDoneCh)
 	if !quiet && lib.IsTTY(os.Stderr) {
 		go discoveryProgressLoop(set, walkDoneCh)
 	}
