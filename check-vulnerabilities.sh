@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Check the project for known vulnerabilities and document results in VULNERABILITIES.md.
-# Runs go mod verify and govulncheck (if available). Overwrites VULNERABILITIES.md with date and findings.
+# Check the project for known vulnerabilities and document results in docs/VULNERABILITIES.md.
+# Runs go mod verify and govulncheck (if available). Overwrites docs/VULNERABILITIES.md with date and findings.
 # Usage: ./check-vulnerabilities.sh (run from project root)
 set -e
 
-VULN_DOC="VULNERABILITIES.md"
+VULN_DOC="docs/VULNERABILITIES.md"
 DATE_ISO=$(date -Iseconds)
 
 {

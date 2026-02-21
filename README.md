@@ -25,9 +25,9 @@ Run `./bin/ffd --help` for options (formats, hash algorithm, workers). See [Usin
 | `smoke-tests.sh <test-name>` | Run one smoke test |
 | `smoke-tests.sh ls` | List tests that can be run individually |
 | `perf-test.sh` | Run performance tests (optimized build; generates data under `./test/perf/tmp/`, appends to `./perf/perf-results.csv`; may take a long time) |
-| `check-vulnerabilities.sh` | Run vulnerability checks (go mod verify, govulncheck if installed) and write results to `VULNERABILITIES.md` |
+| `check-vulnerabilities.sh` | Run vulnerability checks (go mod verify, govulncheck if installed) and write results to `docs/VULNERABILITIES.md` |
 
-See [SPEC.md](SPEC.md) for full details on each script.
+See [docs/SPEC.md](docs/SPEC.md) for full details on each script.
 
 ## Run, build, and test
 
@@ -45,9 +45,9 @@ See [SPEC.md](SPEC.md) for full details on each script.
 
 - **Arguments:** two directory paths (e.g. `./bin/ffd /path/to/a /path/to/b`).
 - **Options:** include output format (`--format`), hash algorithm (`--hash`, default xxhash; multiple options available), and others (see `./bin/ffd --help`). Run with no arguments or `--help` to see full usage and the list of hash algorithms.
-- **Output:** list of files that are "different" between the two trees. Exit code 0 when run completes; non-zero on usage or I/O errors. See [SPEC.md](SPEC.md) for how the diff works.
+- **Output:** list of files that are "different" between the two trees. Exit code 0 when run completes; non-zero on usage or I/O errors. See [docs/SPEC.md](docs/SPEC.md) for how the diff works.
 
-Implementation must follow [SPEC.md](SPEC.md). Keep this README updated with the actual functionality of the CLI (arguments, options, output formats, and usage). Create unit tests for every function that is created.
+Implementation must follow [docs/SPEC.md](docs/SPEC.md). Keep this README updated with the actual functionality of the CLI (arguments, options, output formats, and usage). Create unit tests for every function that is created.
 
 ## Smoke tests
 
@@ -59,13 +59,13 @@ Create smoke tests implemented as shell scripts that run against the compiled ex
 
 ## Performance tests
 
-Performance tests are in their own script (e.g. `./perf-test.sh`) and may take a long time. They must run against an optimized build: build with `go build -ldflags="-s -w" -o bin/ffd .` (do not use `-race` or `-gcflags="-N -l"`). The script generates temporary test trees under `./test/perf/tmp/`, runs scenarios (all same, left-only, right-only) at 0, 1, 10, 100, 1K, 10K, and 100K files, and writes timing output. Results are appended to `./perf/perf-results.csv` (each row: date_iso, scenario, file_count, avg_sec_per_pair). See [SPEC.md](SPEC.md) for full details.
+Performance tests are in their own script (e.g. `./perf-test.sh`) and may take a long time. They must run against an optimized build: build with `go build -ldflags="-s -w" -o bin/ffd .` (do not use `-race` or `-gcflags="-N -l"`). The script generates temporary test trees under `./test/perf/tmp/`, runs scenarios (all same, left-only, right-only) at 0, 1, 10, 100, 1K, 10K, and 100K files, and writes timing output. Results are appended to `./perf/perf-results.csv` (each row: date_iso, scenario, file_count, avg_sec_per_pair). See [docs/SPEC.md](docs/SPEC.md) for full details.
 
 ## For developers
 
 - **Tests:** Run unit tests with `./test.sh` or `go test ./...`. Run the full gate (build + unit + smoke) with `./check.sh`.
 - **Code layout:** The project root contains only `main.go` (CLI entrypoint); all library code lives under `lib/`.
-- **Docs:** [SPEC.md](SPEC.md) (behavior and scripts), [IMPLEMENTATION.md](IMPLEMENTATION.md), [FOLLOWUP.md](FOLLOWUP.md), [SUMMARY.md](SUMMARY.md).
+- **Docs:** [docs/SPEC.md](docs/SPEC.md) (behavior and scripts), [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md), [docs/FOLLOWUP.md](docs/FOLLOWUP.md), [docs/SUMMARY.md](docs/SUMMARY.md).
 
 ## Adding modules
 
