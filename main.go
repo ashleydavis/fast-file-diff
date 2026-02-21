@@ -97,6 +97,8 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	switch outputFormat {
 	case "table":
 		formatTable(diffs, os.Stdout)
+	case "json":
+		formatJSON(diffs, os.Stdout)
 	default:
 		formatTextTree(diffs, os.Stdout)
 	}

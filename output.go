@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -55,4 +56,26 @@ func formatTable(diffs []DiffResult, w *os.File) {
 		}
 		fmt.Fprintf(w, "%s\t%d\t%s\t%s\t%s\n", d.Rel, d.Size, mt, d.Reason, d.Hash)
 	}
+}
+
+func formatJSON(diffs []DiffResult, w *os.File) {
+	sort.Slice(diffs, func(i, j int) bool { return diffs[i].Rel < diffs[j].Rel })
+	type item struct {
+		Path   string `json:"path"`
+		Size   int64  `json:"size"`
+		Mtime  string `json:"mtime"`
+		Reason string `json:"reason"`
+		Hash   string `json:"hash,omitempty"`
+	}
+	var items []item
+	for _, d := range diffs {
+		mt := ""
+		if !d.Mtime.IsZero() {
+			mt = d.Mtime.Format(time.RFC3339)
+		}
+		items = append(items, item{d.Rel, d.Size, mt, d.Reason, d.Hash})
+	}
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	enc.Encode(items)
 }
