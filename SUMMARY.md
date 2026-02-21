@@ -200,3 +200,18 @@ So the pre-commit requirement is now one command (`./check.sh`), and both the pl
 **Why:** The test requires that after adding the same path to both sides, `LeftOnlyPaths()` and `RightOnlyPaths()` are empty. The previous code returned true when it detected a pair but never wrote the current side’s map, so the path appeared only on one side. A first version of the fix wrote the current side and always returned true when the other side had it, which broke `TestDiscoveredSet_addBothFormsPair` (adding the same path on the same side again must not return true). So the fix also returns true only when the current side did not already have the path (`firstTime`).
 
 **How it fixed the problem:** Both sides are now updated whenever a pair is formed, so `LeftOnlyPaths()` and `RightOnlyPaths()` are correct; and we return true only on the first completion of a pair, so repeated Add of the same path on one side does not report a new pair.
+
+---
+
+## 5-file smoke tests
+
+Added six smoke tests that use five files per side (or 5 vs 4) for broader coverage:
+
+- **five-same** — 5 files each side, all identical; expect no size/content diff, exit 0.
+- **five-one-diff** — 5 files each side, one file (f3) different; expect exactly one diff.
+- **five-two-diff-left** — 5 files each side, two files (f2, f4) different on the left; expect exactly two diffs.
+- **five-two-diff-right** — same data, two different on the right; expect exactly two diffs.
+- **five-one-left-only** — 5 files on left, 4 on right (f5 only on left); expect one “left only” (f5).
+- **five-one-right-only** — 4 files on left, 5 on right (f5 only on right); expect one “right only” (f5).
+
+Test data lives under `test/` (e.g. `five-same-left`, `five-same-right`, `five-one-diff-left/right`, etc.). The six test names were added to the `TESTS` array in `smoke-tests.sh`. All 20 smoke tests (14 existing + 6 new) pass with `./check.sh`.
