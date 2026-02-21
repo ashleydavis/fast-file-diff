@@ -27,7 +27,7 @@ This document lists commits in order. Each commit is a single, buildable change 
 
 **Smoke tests as you go:** Write smoke tests as you go where possible. For each commit that introduces behavior testable via the CLI (`bin/ffd`), add a smoke test in that commit. Introduce or extend the smoke test harness when needed so new tests can run. The "Before each commit" check runs smoke tests once the harness exists (from Commit 1 onward).
 
-- **Next:** Commit 18
+- **Next:** Commit 19
 
 ---
 
@@ -211,7 +211,7 @@ This document lists commits in order. Each commit is a single, buildable change 
 - perf-test.sh: build optimized binary, generate data under `./test`, run scenarios at 0, 1, 10, 100, 1K, 10K, 100K files.
 - Human-readable timing output; append to perf-results.csv (ISO date, columns per spec).
 
-## - [ ] Commit 18: CI workflow
+## - [x] Commit 18: CI workflow
 
 **Message:** CI workflow
 
