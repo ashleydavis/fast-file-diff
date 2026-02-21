@@ -1,0 +1,35 @@
+name: Release
+on:
+  release:
+    types: [published]
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      - name: Build and test
+        run: |
+          ./build.sh
+          ./test.sh
+          ./smoke-tests.sh
+      - name: Build Linux
+        run: GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o ffd-linux-amd64 .
+      - name: Build Windows
+        run: GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o ffd.exe .
+      - name: Build macOS
+        run: |
+          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o ffd-darwin-amd64 .
+          GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o ffd-darwin-arm64 .
+      - name: Checksums
+        run: |
+          sha256sum ffd-linux-amd64 ffd.exe ffd-darwin-amd64 ffd-darwin-arm64 > checksums.txt
+      - name: Upload release assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            ffd-linux-amd64 ffd.exe ffd-darwin-amd64 ffd-darwin-arm64 checksums.txt \
+            --clobber
