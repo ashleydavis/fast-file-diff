@@ -100,7 +100,12 @@ This document is updated after each commit: what was done, how it went, and any 
 - **How it went:** Workflow file added and committed.
 - **Problems:** None.
 
-*(Continue for Commit 19; then update Alignment with SPEC.)*
+### Commit 19: Release workflow
+- **What I did:** Added .github/workflows/release.yml: on release published; build and test with scripts; build Linux/Windows/macOS (amd64+arm64) binaries; sha256sum checksums; gh release upload to attach assets and checksums.txt.
+- **How it went:** Workflow file added and committed.
+- **Problems:** None.
+
+*(Final step: update Alignment with SPEC.)*
 
 ---
 
