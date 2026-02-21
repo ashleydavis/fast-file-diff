@@ -12,7 +12,7 @@ A fast CLI that reports which files differ between two directories (by path and 
 | `smoke-tests.sh` | Run all smoke tests |
 | `smoke-tests.sh <test-name>` | Run one smoke test |
 | `smoke-tests.sh ls` | List tests that can be run individually |
-| `perf-test.sh` | Run performance tests (optimized build, generates data under `./test`, may take a long time) |
+| `perf-test.sh` | Run performance tests (optimized build; generates data under `./test/perf/tmp/`, appends to `./perf/perf-results.csv`; may take a long time) |
 
 See [SPEC.md](SPEC.md) for full details on each script.
 
@@ -46,7 +46,7 @@ Create smoke tests implemented as shell scripts that run against the compiled ex
 
 ## Performance tests
 
-Performance tests are in their own script (e.g. `./perf-test.sh`) and may take a long time. They must run against an optimized build: build with `go build -ldflags="-s -w" -o bin/ffd .` (do not use `-race` or `-gcflags="-N -l"`). The script generates test files under `./test` (no pre-existing data), runs scenarios (all same, most same, some same, none same, left-only, right-only) at 0, 1, 10, 100, 1K, 10K, and 100K files, and writes timing output (total time, time per file). Commit the output to Git for snapshots. A CSV file (e.g. `perf-results.csv`) is appended each run so you can chart performance over time. See [SPEC.md](SPEC.md) for full details.
+Performance tests are in their own script (e.g. `./perf-test.sh`) and may take a long time. They must run against an optimized build: build with `go build -ldflags="-s -w" -o bin/ffd .` (do not use `-race` or `-gcflags="-N -l"`). The script generates temporary test trees under `./test/perf/tmp/`, runs scenarios (all same, left-only, right-only) at 0, 1, 10, 100, 1K, 10K, and 100K files, and writes timing output. Results are appended to `./perf/perf-results.csv` (each row: date_iso, scenario, file_count, avg_sec_per_pair). See [SPEC.md](SPEC.md) for full details.
 
 ## Adding modules
 

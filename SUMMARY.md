@@ -225,3 +225,13 @@ Test data lives under `test/` (e.g. `five-same-left`, `five-same-right`, `five-o
 **Why:** Users comparing large trees benefit from seeing how long the run is likely to take; the plan required this improvement.
 
 **What it accomplishes:** Progress now shows processed count, pending count, and estimated time remaining (rounded to seconds) when running without `--quiet` and when stderr is a TTY. Build and all unit and smoke tests pass.
+
+---
+
+## FOLLOWUP Commit 2: Perf CSV format and directory layout
+
+**What was done:** Updated `perf-test.sh` so each CSV record contains only the average time per file pair (`avg_sec_per_pair`), with columns `date_iso,scenario,file_count,avg_sec_per_pair`. Removed `total_sec` and the redundant `time_per_file_sec` name. CSV output now goes to `perf/perf-results.csv`. Temporary performance test trees are generated under `test/perf/tmp/` (e.g. `test/perf/tmp/left`, `test/perf/tmp/right`) instead of under `test/perf/` directly. README updated to describe the new paths and CSV format.
+
+**Why:** The follow-up plan required CSV rows to record only the average time per pair and to separate output (perf/) from temporary data (test/perf/tmp/).
+
+**What it accomplishes:** Perf results are easier to chart (one metric per row); temp data no longer mixes with other test data; CSV and script behavior are documented in README.
