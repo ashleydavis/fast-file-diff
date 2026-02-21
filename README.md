@@ -1,4 +1,4 @@
-# fast-file-diff-go
+# fast-file-diff
 
 A fast CLI that reports which files differ between two directories (by path and content), optimized for speed on large trees.
 
