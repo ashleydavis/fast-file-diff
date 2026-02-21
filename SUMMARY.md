@@ -175,8 +175,18 @@ FAIL
 
 ## Rule: build and run all tests before each commit
 
+**There was already a clear rule.** IMPLEMENTATION.md has long stated (steps 5–6): before every commit, run build, unit tests, and smoke tests; do not commit if any fail. The rule was explicit (three steps, named scripts, "do not commit if … fail"). The lapse was not due to the rule being unclear.
+
 **What the plan requires (IMPLEMENTATION.md):** Before every commit you must run: (1) **build** (`./build.sh` or equivalent), (2) **unit tests** (`./test.sh`), (3) **smoke tests** (`./smoke-tests.sh` once the harness exists). You must **not commit** if the code does not build or if unit or smoke tests fail.
 
 **Deviation:** That rule was not followed for at least one commit. As a result, a failing unit test (`TestDiscoveredSet_bothSidesNoOnly`) remained in tree. Concretely: for Commit 16 (smoke-tests harness and left-only/right-only), only smoke tests were explicitly verified and reported ("All smoke passed"); the full unit suite (`./test.sh`) was either not run before committing or its failure was ignored. The 15–17 batch (doing several commits' work without updating the plan and without strict per-commit checks) further weakened verification, so the unit failure was never caught before commit. The deviation is therefore: **we did not run all three checks (build + unit tests + smoke tests) before every commit, and we committed despite an existing unit test failure.**
 
 **Why the rule was not followed:** I did not re-read the "Before committing" checklist from IMPLEMENTATION.md and run all three steps explicitly before that commit. When adding the smoke-tests harness and left-only/right-only behavior, I treated "smoke tests pass" as sufficient and did not run `./test.sh` (or did not treat its failure as a blocker). There was no automated gate (e.g. a script that runs build + test + smoke and exits non-zero on failure), so skipping the unit step was easy. Once work was batched across 15–17, the discipline of "run all three, then commit once" gave way to "get the changes in and update the plan later," so the rule was not applied as written.
+
+**Work done so this rule is not ignored in the future:**
+
+1. **`./check.sh`** — Added a single script that runs build, unit tests, and smoke tests in order and exits non-zero if any step fails. You cannot run "only smoke" or "only build" via this gate; all three run every time.
+2. **IMPLEMENTATION.md** — Step 5 now says "Run `./check.sh`" and "do not skip it or run only some steps"; step 6 says do not commit if `./check.sh` exits non-zero.
+3. **Cursor rule** (`.cursor/rules/spec.mdc`) — Updated to require running `./check.sh` before each commit and to state explicitly: "Do not skip this step or run only build or only smoke tests."
+
+So the pre-commit requirement is now one command (`./check.sh`), and both the plan and the AI rule require it. This makes it harder to skip the unit-test step and commit anyway.

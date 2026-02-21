@@ -10,8 +10,8 @@ This document lists commits in order. Each commit is a single, buildable change 
 2. **TDD** — For each new function: write a **failing** unit test first, then implement until the test passes. If you cannot write a failing test first, stop and ask for directions.
 3. **Smoke tests** — If this commit introduces behavior testable via the CLI, add (or extend) a smoke test in this commit; extend the harness if needed.
 4. **Implement** — Do the work in that commit’s bullet list (and any smoke test bullet).
-5. **Before committing** — Run these checks: (1) build (`./build.sh` or `go build -ldflags="-s -w" -o bin/ffd .`), (2) unit tests (`./test.sh`), (3) smoke tests (`./smoke-tests.sh`, once the harness and at least one test exist, from Commit 1 onward).
-6. **Do not commit** if the code does not build or if unit or smoke tests fail.
+5. **Before committing** — Run `./check.sh`. It runs build, unit tests, and smoke tests in order (see [check.sh](check.sh)). From Commit 1 onward you must run it before every commit; do not skip it or run only some steps.
+6. **Do not commit** if `./check.sh` exits non-zero (build failed, unit tests failed, or smoke tests failed).
 7. **Commit** — Use the **Message:** line from this file as the commit subject and the **Description:** paragraph as the body.
 8. **Update SUMMARY.md** — Add an entry for this commit: what you did, how it went, and any problems.
 9. **Update plan** — Set "Next:" to the following commit and mark the completed commit with `[x]`.
