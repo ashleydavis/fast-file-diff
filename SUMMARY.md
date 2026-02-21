@@ -53,7 +53,12 @@ This document is updated after each commit: what was done, how it went, and any 
 - **How it went:** All tests and smoke passed.
 - **Problems:** None.
 
-*(Continue for Commits 10–19; add entries as you complete each commit.)*
+### Commit 10: Hash selection and content comparison
+- **What I did:** Added hash.go (xxhash, sha256, md5; hashFile with threshold, sync.Pool); --hash and --threshold flags; comparePair hashes when same size + different mtime, reports \"content differs\" + hash; DiffResult.Hash; smoke hash-xxhash; unit tests for hash and compare.
+- **How it went:** All tests and smoke passed.
+- **Problems:** None.
+
+*(Continue for Commits 11–19; add entries as you complete each commit.)*
 
 ---
 
