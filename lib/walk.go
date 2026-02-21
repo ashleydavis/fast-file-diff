@@ -59,13 +59,16 @@ func listDirEntries(root, relDir string) ([]dirEntryInfo, error) {
 }
 
 // Lists one directory, adds files to set with their side/size/mtime, and enqueues subdirs (or runs them inline if dirCh is full to avoid deadlock).
-func processDirJob(job dirJob, set *DiscoveredSet, log *Logger, dirCh chan dirJob, jobWg *sync.WaitGroup) {
+// onDirProcessed must be non-nil; it is called at the start of the directory and once per entry so utilization reflects ongoing work.
+func processDirJob(job dirJob, set *DiscoveredSet, log *Logger, dirCh chan dirJob, jobWg *sync.WaitGroup, onDirProcessed func()) {
 	defer jobWg.Done()
+	onDirProcessed()
 	entries, err := listDirEntries(job.Root, job.RelDir)
 	if err != nil {
 		return
 	}
 	for _, ent := range entries {
+		onDirProcessed()
 		relPath := ent.Name
 		if job.RelDir != "" {
 			relPath = filepath.Join(job.RelDir, ent.Name)
@@ -77,7 +80,7 @@ func processDirJob(job dirJob, set *DiscoveredSet, log *Logger, dirCh chan dirJo
 			case dirCh <- dirJob{Root: job.Root, RelDir: relPath, Side: job.Side}:
 			default:
 				// Channel full: do this dir inline to avoid deadlock
-				processDirJob(dirJob{Root: job.Root, RelDir: relPath, Side: job.Side}, set, log, dirCh, jobWg)
+				processDirJob(dirJob{Root: job.Root, RelDir: relPath, Side: job.Side}, set, log, dirCh, jobWg, onDirProcessed)
 			}
 		} else {
 			log.Log("file: " + relPath)
@@ -89,7 +92,8 @@ func processDirJob(job dirJob, set *DiscoveredSet, log *Logger, dirCh chan dirJo
 // WalkBothTrees uses a worker pool to walk both trees in parallel. Queue is seeded with the two roots.
 // Workers take directories from the queue, list them, add files to set, and enqueue subdirectories.
 // When all directories are processed, doneCh is closed.
-func WalkBothTrees(leftRoot, rightRoot string, dirBatchSize int, numWalkWorkers int, log *Logger, set *DiscoveredSet, doneCh chan struct{}) {
+// workerUtilization must be non-nil; workers Poke at the start of each directory and once per entry while listing, so utilization stays meaningful when directories have many files.
+func WalkBothTrees(leftRoot, rightRoot string, dirBatchSize int, numWalkWorkers int, log *Logger, set *DiscoveredSet, doneCh chan struct{}, workerUtilization *WorkerUtilization) {
 	if numWalkWorkers <= 0 {
 		numWalkWorkers = 1
 	}
@@ -106,11 +110,13 @@ func WalkBothTrees(leftRoot, rightRoot string, dirBatchSize int, numWalkWorkers 
 	}()
 	var workerWg sync.WaitGroup
 	for i := 0; i < numWalkWorkers; i++ {
+		idx := i
 		workerWg.Add(1)
+		onDir := func() { workerUtilization.Poke(idx) }
 		go func() {
 			defer workerWg.Done()
 			for job := range dirCh {
-				processDirJob(job, set, log, dirCh, &jobWg)
+				processDirJob(job, set, log, dirCh, &jobWg, onDir)
 			}
 		}()
 	}

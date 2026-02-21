@@ -94,9 +94,11 @@ func runRoot(cmd *cobra.Command, args []string) error {
 
 	// Phase 1: discover all file pairs by walking both trees.
 	walkDoneCh := make(chan struct{})
-	go lib.WalkBothTrees(left, right, dirBatchSize, numWorkers, logger, set, walkDoneCh)
+	const utilWindowTicks = 30 // ~3 seconds at 100ms tick; longer window so "workers active" is meaningful when work is bursty
+	walkWorkerUtilization := lib.NewWorkerUtilization(numWorkers, utilWindowTicks)
+	go lib.WalkBothTrees(left, right, dirBatchSize, numWorkers, logger, set, walkDoneCh, walkWorkerUtilization)
 	if !quiet && lib.IsTTY(os.Stderr) {
-		go discoveryProgressLoop(set, walkDoneCh, numWorkers)
+		go discoveryProgressLoop(set, walkDoneCh, numWorkers, walkWorkerUtilization)
 	}
 	<-walkDoneCh
 
@@ -122,6 +124,11 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		pairJobs = append(pairJobs, lib.PairJob{Rel: rel, Cached: cached})
 	}
 	progressCounts.TotalPairs = int32(len(pairJobs))
+	if len(pairJobs) > 0 {
+		progressCounts.WorkerProcessed = make([]int32, numWorkers)
+	}
+
+	compareWorkerUtilization := lib.NewWorkerUtilization(numWorkers, utilWindowTicks)
 
 	pairCh := make(chan lib.PairJob, len(pairJobs)+1)
 	go func() {
@@ -130,11 +137,11 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		}
 		close(pairCh)
 	}()
-	go lib.RunWorkers(left, right, numWorkers, hashAlg, hashThreshold, pairCh, resultCh, progressCounts)
+	go lib.RunWorkers(left, right, numWorkers, hashAlg, hashThreshold, pairCh, resultCh, progressCounts, compareWorkerUtilization)
 
 	compareDoneCh := make(chan struct{})
 	if !quiet && lib.IsTTY(os.Stderr) {
-		go progressLoop(progressCounts, compareDoneCh, numWorkers)
+		go progressLoop(progressCounts, compareDoneCh, numWorkers, compareWorkerUtilization)
 	}
 	for diffResult := range resultCh {
 		diffs = append(diffs, diffResult)
@@ -177,6 +184,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "  Files same:             %d\n", sameCount)
 		fmt.Fprintf(os.Stderr, "  Total time:             %s\n", elapsed.Round(time.Millisecond))
 		fmt.Fprintf(os.Stderr, "  Average per comparison: %s\n", avgPerComparison.Round(time.Microsecond))
+		fmt.Fprintf(os.Stderr, "  Workers utilized (did ≥1 compare): %d%%\n", compareWorkerUtilization.UtilizedPercentWholeRun())
 	}
 	switch outputFormat {
 	case "table":
@@ -197,8 +205,8 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// Prints "scanning: N file pairs" to stderr on a ticker until doneCh closes, so the user sees progress during the walk without blocking it.
-func discoveryProgressLoop(set *lib.DiscoveredSet, doneCh <-chan struct{}, numWorkers int) {
+// Prints "scanning: N file pairs" to stderr on a ticker until doneCh closes. Appends the percentage of workers utilized in the last second (from workerUtilization.Tick()).
+func discoveryProgressLoop(set *lib.DiscoveredSet, doneCh <-chan struct{}, numWorkers int, workerUtilization *lib.WorkerUtilization) {
 	tick := time.NewTicker(100 * time.Millisecond)
 	defer tick.Stop()
 	for {
@@ -207,7 +215,10 @@ func discoveryProgressLoop(set *lib.DiscoveredSet, doneCh <-chan struct{}, numWo
 			return
 		case <-tick.C:
 			n := set.PairsCount()
-			fmt.Fprintf(os.Stderr, "\rscanning: %d file pairs found (%d workers)   ", n, numWorkers)
+			windowed := workerUtilization.Tick()
+			total := workerUtilization.UtilizedPercentWholeRun()
+			workStats := fmt.Sprintf(" [3s: %d%%, total: %d%%]", windowed, total)
+			fmt.Fprintf(os.Stderr, "\rscanning: %d file pairs found (%d workers)%s   ", n, numWorkers, workStats)
 		}
 	}
 }
@@ -230,8 +241,8 @@ func estimateRemainingDuration(processed, pending int32, startTimeUnixNano int64
 	return estimateRemainingFromElapsed(elapsed, processed, pending)
 }
 
-// Prints "comparing: N of M, ~Xs remaining" to stderr until doneCh closes; uses atomic loads on progressCounts so it's safe with workers and doesn't lock the hot path.
-func progressLoop(progressCounts *lib.ProgressCounts, doneCh <-chan struct{}, numWorkers int) {
+// Prints "comparing: N of M, ~Xs remaining" to stderr until doneCh closes. If workerUtilization is non-nil, appends the percentage of workers utilized in the last second (from workerUtilization.Tick()).
+func progressLoop(progressCounts *lib.ProgressCounts, doneCh <-chan struct{}, numWorkers int, workerUtilization *lib.WorkerUtilization) {
 	tick := time.NewTicker(100 * time.Millisecond)
 	defer tick.Stop()
 	for {
@@ -245,6 +256,9 @@ func progressLoop(progressCounts *lib.ProgressCounts, doneCh <-chan struct{}, nu
 			if processedCount == 0 && totalPairs == 0 {
 				continue
 			}
+			windowed := workerUtilization.Tick()
+			total := workerUtilization.UtilizedPercentWholeRun()
+			workStats := fmt.Sprintf(" [3s: %d%%, total: %d%%]", windowed, total)
 			if totalPairs > 0 {
 				pending := totalPairs - processedCount
 				if pending < 0 {
@@ -252,13 +266,13 @@ func progressLoop(progressCounts *lib.ProgressCounts, doneCh <-chan struct{}, nu
 				}
 				remaining := estimateRemainingDuration(processedCount, pending, startTimeNano)
 				if remaining > 0 {
-					fmt.Fprintf(os.Stderr, "\rcomparing: %d of %d, ~%s remaining (%d workers)   ", processedCount, totalPairs, remaining.Round(time.Second), numWorkers)
+					fmt.Fprintf(os.Stderr, "\rcomparing: %d of %d, ~%s remaining (%d workers)%s   ", processedCount, totalPairs, remaining.Round(time.Second), numWorkers, workStats)
 				} else {
-					fmt.Fprintf(os.Stderr, "\rcomparing: %d of %d (%d workers)   ", processedCount, totalPairs, numWorkers)
+					fmt.Fprintf(os.Stderr, "\rcomparing: %d of %d (%d workers)%s   ", processedCount, totalPairs, numWorkers, workStats)
 				}
 			} else {
 				enqueuedCount := atomic.LoadInt32(&progressCounts.Enqueued)
-				fmt.Fprintf(os.Stderr, "\rprocessed %d, enqueued %d (%d workers)   ", processedCount, enqueuedCount, numWorkers)
+				fmt.Fprintf(os.Stderr, "\rprocessed %d, enqueued %d (%d workers)%s   ", processedCount, enqueuedCount, numWorkers, workStats)
 			}
 		}
 	}
