@@ -80,6 +80,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		defer logger.PrintLogPaths()
 	}
 	logger.Log("started comparison")
+	startTime := time.Now()
 	pool := lib.NewPathPool()
 	set := lib.NewDiscoveredSet(pool)
 	resultCh := make(chan lib.DiffResult, 256)
@@ -121,17 +122,43 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		logger.Log("diff: " + diffResult.Rel + " " + diffResult.Reason)
 	}
 	close(compareDoneCh)
+	differentCount := len(diffs)
+	totalCompared := len(pairPaths)
+	sameCount := totalCompared - differentCount
+	if sameCount < 0 {
+		sameCount = 0
+	}
+	leftOnlyCount := 0
 	for _, rel := range set.LeftOnlyPaths() {
 		path := filepath.Join(left, rel)
 		if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
 			diffs = append(diffs, lib.DiffResult{Rel: rel, Reason: "left only", Size: info.Size(), Mtime: info.ModTime().Truncate(time.Second), LeftOnly: true})
+			leftOnlyCount++
 		}
 	}
+	rightOnlyCount := 0
 	for _, rel := range set.RightOnlyPaths() {
 		path := filepath.Join(right, rel)
 		if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
 			diffs = append(diffs, lib.DiffResult{Rel: rel, Reason: "right only", Size: info.Size(), Mtime: info.ModTime().Truncate(time.Second)})
+			rightOnlyCount++
 		}
+	}
+	if !quiet {
+		elapsed := time.Since(startTime)
+		avgPerComparison := time.Duration(0)
+		if totalCompared > 0 {
+			avgPerComparison = elapsed / time.Duration(totalCompared)
+		}
+		fmt.Fprintln(os.Stderr, "")
+		fmt.Fprintf(os.Stderr, "Summary:\n")
+		fmt.Fprintf(os.Stderr, "  Total files compared:    %d\n", totalCompared)
+		fmt.Fprintf(os.Stderr, "  Files only on left:     %d\n", leftOnlyCount)
+		fmt.Fprintf(os.Stderr, "  Files only on right:    %d\n", rightOnlyCount)
+		fmt.Fprintf(os.Stderr, "  Files different:        %d\n", differentCount)
+		fmt.Fprintf(os.Stderr, "  Files same:             %d\n", sameCount)
+		fmt.Fprintf(os.Stderr, "  Total time:             %s\n", elapsed.Round(time.Millisecond))
+		fmt.Fprintf(os.Stderr, "  Average per comparison: %s\n", avgPerComparison.Round(time.Microsecond))
 	}
 	switch outputFormat {
 	case "table":
