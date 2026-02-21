@@ -8,8 +8,10 @@ import (
 	"time"
 )
 
+// Exit code used when Fatal is called so callers can distinguish fatal errors from usage errors.
 const FatalExitCode = 2
 
+// Writes to a main log and a separate error log under a temp dir; used so we can report log paths and keep errors in one place. Safe for concurrent use via mutex.
 type Logger struct {
 	tempDir   string
 	mainPath  string
@@ -20,6 +22,7 @@ type Logger struct {
 	mu        sync.Mutex
 }
 
+// Creates a temp dir and two log files (main + errors) with dated names; callers should defer Close and optionally PrintLogPaths so users know where to look.
 func NewLogger() (*Logger, error) {
 	tmp, err := os.MkdirTemp("", "ffd-*")
 	if err != nil {
@@ -43,8 +46,10 @@ func NewLogger() (*Logger, error) {
 	return &Logger{tempDir: tmp, mainPath: mainPath, errorPath: errorPath, mainFile: mainFile, errorFile: errorFile}, nil
 }
 
+// Returns the temp directory path so callers can inspect log files or pass to other tools.
 func (logger *Logger) TempDir() string { return logger.tempDir }
 
+// Appends a line to the main log and syncs; used for normal progress/diff messages. Skips if already closed.
 func (logger *Logger) Log(msg string) {
 	logger.mu.Lock()
 	defer logger.mu.Unlock()
@@ -54,6 +59,7 @@ func (logger *Logger) Log(msg string) {
 	}
 }
 
+// Writes the error to both main and error logs and increments the non-fatal count; used so we can report "N errors, check error log" at the end without exiting.
 func (logger *Logger) LogError(err error) {
 	logger.mu.Lock()
 	defer logger.mu.Unlock()
@@ -68,6 +74,7 @@ func (logger *Logger) LogError(err error) {
 	}
 }
 
+// Logs the error to both files, prints to stderr, then exits with FatalExitCode. Used for unrecoverable setup failures (e.g. can't create logger).
 func (logger *Logger) Fatal(err error) {
 	logger.mu.Lock()
 	msg := err.Error()
@@ -84,6 +91,7 @@ func (logger *Logger) Fatal(err error) {
 	os.Exit(FatalExitCode)
 }
 
+// Prints main and error log paths to stderr so the user knows where to look; no-op when stdout isn't a TTY (e.g. in pipes) so we don't pollute script output.
 func (logger *Logger) PrintLogPaths() {
 	if !IsTTY(os.Stdout) {
 		return
@@ -100,12 +108,14 @@ func (logger *Logger) PrintLogPaths() {
 	}
 }
 
+// Returns how many times LogError was called; used to decide exit code and whether to tell the user to check the error log.
 func (logger *Logger) NonFatalCount() int {
 	logger.mu.Lock()
 	defer logger.mu.Unlock()
 	return logger.nonFatal
 }
 
+// Closes both log files and clears references so later Log/LogError calls no-op. Returns the first close error if any.
 func (logger *Logger) Close() error {
 	logger.mu.Lock()
 	defer logger.mu.Unlock()
@@ -125,6 +135,7 @@ func (logger *Logger) Close() error {
 	return closeError
 }
 
+// Reports whether file is a character device (terminal); used to decide whether to show progress and log paths so we don't spam non-interactive output.
 func IsTTY(file *os.File) bool {
 	if file == nil {
 		return false

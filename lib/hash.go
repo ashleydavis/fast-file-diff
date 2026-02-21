@@ -12,6 +12,7 @@ import (
 	"github.com/cespare/xxhash/v2"
 )
 
+// Hashes the file at path with the given algorithm; files smaller than threshold are read fully (hashFull), larger ones are streamed (hashStream) to bound memory.
 func hashFile(path, algorithm string, threshold int) (string, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -32,6 +33,7 @@ func hashFile(path, algorithm string, threshold int) (string, error) {
 	return hashStream(file, algorithm, threshold)
 }
 
+// Pool of 10MiB buffers for streaming hash; reused across hashStream calls to avoid allocating per file.
 var bufPool = sync.Pool{
 	New: func() interface{} {
 		buffer := make([]byte, 10*1024*1024)
@@ -39,6 +41,7 @@ var bufPool = sync.Pool{
 	},
 }
 
+// Reads size bytes into a single buffer and hashes with hashBytes. Used for small files so we don't spin up the streaming path.
 func hashFull(reader io.Reader, algorithm string, size int) (string, error) {
 	fullBuffer := make([]byte, size)
 	if _, err := io.ReadFull(reader, fullBuffer); err != nil {
@@ -47,6 +50,7 @@ func hashFull(reader io.Reader, algorithm string, size int) (string, error) {
 	return hashBytes(fullBuffer, algorithm)
 }
 
+// Hashes by reading in bufSize chunks and feeding the algorithm incrementally; uses bufPool so we don't allocate a big buffer per file. Used for files over the threshold.
 func hashStream(reader io.Reader, algorithm string, bufSize int) (string, error) {
 	buf := bufPool.Get().(*[]byte)
 	defer bufPool.Put(buf)
@@ -102,6 +106,7 @@ func hashStream(reader io.Reader, algorithm string, bufSize int) (string, error)
 	}
 }
 
+// Hashes a byte slice with xxhash, sha256, or md5; returns hex string. Used by hashFull and for tests; streaming path uses the same algorithms via incremental writers.
 func hashBytes(data []byte, algorithm string) (string, error) {
 	switch algorithm {
 	case "xxhash":

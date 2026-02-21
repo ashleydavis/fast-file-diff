@@ -19,12 +19,14 @@ const (
 	ExitNonFatal = 3
 )
 
+// Runs the CLI; on any error exits with ExitUsage so scripts get a consistent exit code.
 func main() {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(ExitUsage)
 	}
 }
 
+// Hold flag values so runRoot can read them without passing through cobra.
 var dirBatchSize int
 var numWorkers int
 var hashAlg string
@@ -32,6 +34,7 @@ var hashThreshold int
 var outputFormat string
 var quiet bool
 
+// Single top-level command; requireZeroOrTwoArgs validates args, runRoot does the diff.
 var rootCmd = &cobra.Command{
 	Use:   "ffd <left-dir> <right-dir>",
 	Short: "Fast file diff between two directory trees",
@@ -40,6 +43,7 @@ var rootCmd = &cobra.Command{
 	RunE:  runRoot,
 }
 
+// Binds flags to the package-level vars; defaults match the spec (e.g. xxhash, 10MiB threshold).
 func init() {
 	rootCmd.Flags().IntVar(&dirBatchSize, "dir-batch-size", 4096, "On Linux: batch size for directory reads (entries per syscall)")
 	rootCmd.Flags().IntVar(&numWorkers, "workers", runtime.NumCPU(), "Number of worker goroutines for comparing file pairs")
@@ -49,6 +53,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&quiet, "quiet", false, "Suppress progress and final error-log message (for scripting)")
 }
 
+// Enforces 0 args (for --help) or 2 args (left and right dir); used as cobra's Args so users get a clear error.
 func requireZeroOrTwoArgs(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 || len(args) == 2 {
 		return nil
@@ -56,6 +61,7 @@ func requireZeroOrTwoArgs(cmd *cobra.Command, args []string) error {
 	return fmt.Errorf("requires 0 or 2 arguments, got %d", len(args))
 }
 
+// Validates dirs, walks both trees, compares pairs (with progress when not quiet), then writes diffs in the chosen format. Drives lib for walk, discovery, hashing, and output; progress and logging stay here so the CLI controls UX.
 func runRoot(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
 		cmd.SetOut(os.Stdout)
@@ -191,6 +197,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// Prints "scanning: N file pairs" to stderr on a ticker until doneCh closes, so the user sees progress during the walk without blocking it.
 func discoveryProgressLoop(set *lib.DiscoveredSet, doneCh <-chan struct{}, numWorkers int) {
 	tick := time.NewTicker(100 * time.Millisecond)
 	defer tick.Stop()
@@ -205,6 +212,7 @@ func discoveryProgressLoop(set *lib.DiscoveredSet, doneCh <-chan struct{}, numWo
 	}
 }
 
+// Extrapolates remaining time from elapsed and (processed, pending) so we can show "~Xs remaining"; returns 0 if processed or pending is non-positive.
 func estimateRemainingFromElapsed(elapsed time.Duration, processed, pending int32) time.Duration {
 	if processed <= 0 || pending <= 0 {
 		return 0
@@ -213,6 +221,7 @@ func estimateRemainingFromElapsed(elapsed time.Duration, processed, pending int3
 	return averagePerPair * time.Duration(pending)
 }
 
+// Uses progress counts and start time (from ProgressCounts) to compute remaining time; used by progressLoop with atomically loaded values.
 func estimateRemainingDuration(processed, pending int32, startTimeUnixNano int64) time.Duration {
 	if startTimeUnixNano == 0 {
 		return 0
@@ -221,6 +230,7 @@ func estimateRemainingDuration(processed, pending int32, startTimeUnixNano int64
 	return estimateRemainingFromElapsed(elapsed, processed, pending)
 }
 
+// Prints "comparing: N of M, ~Xs remaining" to stderr until doneCh closes; uses atomic loads on progressCounts so it's safe with workers and doesn't lock the hot path.
 func progressLoop(progressCounts *lib.ProgressCounts, doneCh <-chan struct{}, numWorkers int) {
 	tick := time.NewTicker(100 * time.Millisecond)
 	defer tick.Stop()

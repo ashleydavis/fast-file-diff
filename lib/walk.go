@@ -58,6 +58,7 @@ func listDirEntries(root, relDir string) ([]dirEntryInfo, error) {
 	return out, nil
 }
 
+// Lists one directory, adds files to set with their side/size/mtime, and enqueues subdirs (or runs them inline if dirCh is full to avoid deadlock).
 func processDirJob(job dirJob, set *DiscoveredSet, log *Logger, dirCh chan dirJob, jobWg *sync.WaitGroup) {
 	defer jobWg.Done()
 	entries, err := listDirEntries(job.Root, job.RelDir)
@@ -117,6 +118,7 @@ func WalkBothTrees(leftRoot, rightRoot string, dirBatchSize int, numWalkWorkers 
 	close(doneCh)
 }
 
+// Walks root with filepath.WalkDir, calls fn for each file and dir with relative path and metadata; skips symlinks and non-regular files. Used on non-Linux and as fallback so behavior is consistent everywhere.
 func walkTreePortable(root string, fn WalkFileFunc) {
 	filepath.WalkDir(root, func(path string, dirEntry fs.DirEntry, err error) error {
 		if err != nil {
@@ -148,6 +150,7 @@ func walkTreePortable(root string, fn WalkFileFunc) {
 	})
 }
 
+// Default entry for a single-tree walk; delegates to walkTreePortable (Linux may use walkTreeWithBatch instead for batched reads).
 func walkTree(root string, fn WalkFileFunc) {
 	walkTreePortable(root, fn)
 }

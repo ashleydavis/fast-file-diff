@@ -28,6 +28,7 @@ type PairJob struct {
 	Cached *PairInfo
 }
 
+// Stores size and mtime for one side of a path inside DiscoveredSet; mtime is truncated to second for stable comparison.
 type fileInfoCache struct {
 	size int64
 	mtime time.Time
