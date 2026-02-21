@@ -215,3 +215,13 @@ Added six smoke tests that use five files per side (or 5 vs 4) for broader cover
 - **five-one-right-only** — 4 files on left, 5 on right (f5 only on right); expect one “right only” (f5).
 
 Test data lives under `test/` (e.g. `five-same-left`, `five-same-right`, `five-one-diff-left/right`, etc.). The six test names were added to the `TESTS` array in `smoke-tests.sh`. All 20 smoke tests (14 existing + 6 new) pass with `./check.sh`.
+
+---
+
+## FOLLOWUP Commit 1: Progress indicator — estimate time remaining
+
+**What was done:** The progress line on stderr now shows an estimate of time remaining (e.g. "processed N, pending M, ~Xs remaining") when there is enough data. Added `startTimeUnixNano` to `progressCounts` (set when the first pair is enqueued in `runWorkers`). Added `estimateRemainingFromElapsed` (pure function for testing) and `estimateRemainingDuration` (uses start time and current time). The progress loop calls the estimator and prints "~Xs remaining" when pending > 0 and average time per pair is available. Added unit test `TestEstimateRemainingFromElapsed` for the estimate helper.
+
+**Why:** Users comparing large trees benefit from seeing how long the run is likely to take; the plan required this improvement.
+
+**What it accomplishes:** Progress now shows processed count, pending count, and estimated time remaining (rounded to seconds) when running without `--quiet` and when stderr is a TTY. Build and all unit and smoke tests pass.

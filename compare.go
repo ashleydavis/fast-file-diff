@@ -75,6 +75,8 @@ func runWorkers(leftRoot, rightRoot string, n int, hashAlg string, threshold int
 		for rel := range pairCh {
 			if progress != nil {
 				atomic.AddInt32(&progress.enqueued, 1)
+				// Record start time when first pair is enqueued (for time-remaining estimate).
+				atomic.CompareAndSwapInt64(&progress.startTimeUnixNano, 0, time.Now().UnixNano())
 			}
 			workCh <- rel
 		}
@@ -84,7 +86,9 @@ func runWorkers(leftRoot, rightRoot string, n int, hashAlg string, threshold int
 	}()
 }
 
+// progressCounts holds counters and start time for the progress indicator and time-remaining estimate.
 type progressCounts struct {
-	enqueued  int32
-	processed int32
+	enqueued          int32
+	processed         int32
+	startTimeUnixNano int64 // set when first pair is enqueued; 0 means not yet started
 }

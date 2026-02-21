@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestEnsureDir_validDirectory(t *testing.T) {
@@ -33,5 +34,24 @@ func TestEnsureDir_fileNotDir(t *testing.T) {
 	}
 	if err := ensureDir(f); err == nil {
 		t.Error("ensureDir(file) = nil, want error")
+	}
+}
+
+func TestEstimateRemainingFromElapsed(t *testing.T) {
+	elapsed := 10 * time.Second
+	// 10 processed in 10s => 1s per pair; 5 pending => 5s remaining
+	got := estimateRemainingFromElapsed(elapsed, 10, 5)
+	if got != 5*time.Second {
+		t.Errorf("estimateRemainingFromElapsed(10s, 10, 5) = %v, want 5s", got)
+	}
+	// processed 0 => no estimate
+	got = estimateRemainingFromElapsed(elapsed, 0, 5)
+	if got != 0 {
+		t.Errorf("estimateRemainingFromElapsed(10s, 0, 5) = %v, want 0", got)
+	}
+	// pending 0 => 0 remaining
+	got = estimateRemainingFromElapsed(elapsed, 10, 0)
+	if got != 0 {
+		t.Errorf("estimateRemainingFromElapsed(10s, 10, 0) = %v, want 0", got)
 	}
 }

@@ -130,6 +130,26 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// estimateRemainingFromElapsed returns estimated remaining time from elapsed duration and processed/pending counts.
+// Used for testing; the progress loop uses estimateRemainingDuration which derives elapsed from start time.
+func estimateRemainingFromElapsed(elapsed time.Duration, processed, pending int32) time.Duration {
+	if processed <= 0 || pending <= 0 {
+		return 0
+	}
+	averagePerPair := elapsed / time.Duration(processed)
+	return averagePerPair * time.Duration(pending)
+}
+
+// estimateRemainingDuration returns an estimate of time remaining based on processed count,
+// pending count, and start time. Returns zero if not enough data (processed <= 0, pending <= 0, or start not set).
+func estimateRemainingDuration(processed, pending int32, startTimeUnixNano int64) time.Duration {
+	if startTimeUnixNano == 0 {
+		return 0
+	}
+	elapsed := time.Since(time.Unix(0, startTimeUnixNano))
+	return estimateRemainingFromElapsed(elapsed, processed, pending)
+}
+
 func progressLoop(p *progressCounts, doneCh <-chan struct{}) {
 	tick := time.NewTicker(100 * time.Millisecond)
 	defer tick.Stop()
@@ -144,7 +164,13 @@ func progressLoop(p *progressCounts, doneCh <-chan struct{}) {
 			if enq == 0 && proc == 0 {
 				continue
 			}
-			fmt.Fprintf(os.Stderr, "\rprocessed %d, pending %d   ", proc, pending)
+			startNano := atomic.LoadInt64(&p.startTimeUnixNano)
+			remaining := estimateRemainingDuration(proc, pending, startNano)
+			if remaining > 0 {
+				fmt.Fprintf(os.Stderr, "\rprocessed %d, pending %d, ~%s remaining   ", proc, pending, remaining.Round(time.Second))
+			} else {
+				fmt.Fprintf(os.Stderr, "\rprocessed %d, pending %d   ", proc, pending)
+			}
 		}
 	}
 }
