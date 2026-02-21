@@ -335,3 +335,13 @@ Test data lives under `test/` (e.g. `five-same-left`, `five-same-right`, `five-o
 **Why:** Previously "pending" was only the in-flight queue depth (usually 0 or 1 when comparison kept up with the walk), so time remaining was almost always 0s. By discovering all pairs first, we know the total count and can show accurate "N of M" and remaining-time estimates during the compare phase.
 
 **What it accomplishes:** Users see how many file pairs were found while scanning; during comparison they see "N of Total" and a meaningful ~Xs remaining estimate. All unit and smoke tests pass.
+
+---
+
+## Cache size and mtime during discovery walk
+
+**What was done:** The discovery walk now records size and mtime for each file and the compare phase uses that cache so it can skip os.Stat for pairs. Walk callback is now WalkFileFunc(rel, isDir, size, mtime); portable walk passes info.Size()/ModTime() from dirEntry.Info(), Linux batched walk passes entry.Size()/ModTime() from Readdir’s FileInfo. DiscoveredSet.Add(rel, side, size, mtime) stores size/mtime in leftFileInfo/rightFileInfo; PairCachedInfo(rel) returns *PairInfo when both sides are cached. Introduced PairJob { Rel, Cached *PairInfo }; RunWorkers accepts chan PairJob and comparePair(..., cached) uses cached size/mtime when non-nil and skips stat. Main builds []PairJob from PairPaths() and PairCachedInfo(rel) and sends them to workers.
+
+**Why:** Stating each file twice per pair (left and right) during compare was redundant when the walk had already seen those files; caching size and mtime during the walk avoids two stats per pair in the compare phase.
+
+**What it accomplishes:** Compare phase does no stat for size/mtime when cache is present; build and all unit and smoke tests pass.

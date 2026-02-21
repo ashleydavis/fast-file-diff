@@ -28,51 +28,62 @@ type ProgressCounts struct {
 	TotalPairs        int32
 }
 
-func comparePair(leftRoot, rightRoot, rel, hashAlg string, threshold int) (different bool, reason string, hashStr string, size int64, mtime time.Time) {
+func comparePair(leftRoot, rightRoot, rel, hashAlg string, threshold int, cached *PairInfo) (different bool, reason string, hashStr string, size int64, mtime time.Time) {
 	leftPath := filepath.Join(leftRoot, rel)
 	rightPath := filepath.Join(rightRoot, rel)
-	leftInfo, err := os.Stat(leftPath)
-	if err != nil {
-		return true, "stat left: " + err.Error(), "", 0, time.Time{}
+	var leftSize, rightSize int64
+	var leftModTime, rightModTime time.Time
+	if cached != nil {
+		leftSize = cached.LeftSize
+		rightSize = cached.RightSize
+		leftModTime = cached.LeftMtime
+		rightModTime = cached.RightMtime
+	} else {
+		leftInfo, err := os.Stat(leftPath)
+		if err != nil {
+			return true, "stat left: " + err.Error(), "", 0, time.Time{}
+		}
+		rightInfo, err := os.Stat(rightPath)
+		if err != nil {
+			return true, "stat right: " + err.Error(), "", 0, time.Time{}
+		}
+		leftSize = leftInfo.Size()
+		rightSize = rightInfo.Size()
+		leftModTime = leftInfo.ModTime().Truncate(time.Second)
+		rightModTime = rightInfo.ModTime().Truncate(time.Second)
 	}
-	rightInfo, err := os.Stat(rightPath)
-	if err != nil {
-		return true, "stat right: " + err.Error(), "", 0, time.Time{}
+	if leftSize != rightSize {
+		return true, "size changed", "", leftSize, leftModTime
 	}
-	if leftInfo.Size() != rightInfo.Size() {
-		return true, "size changed", "", leftInfo.Size(), leftInfo.ModTime().Truncate(time.Second)
-	}
-	leftModTime := leftInfo.ModTime().Truncate(time.Second)
-	rightModTime := rightInfo.ModTime().Truncate(time.Second)
 	if leftModTime.Equal(rightModTime) {
 		return false, "", "", 0, time.Time{}
 	}
 	leftHash, err := hashFile(leftPath, hashAlg, threshold)
 	if err != nil {
-		return true, "hash left: " + err.Error(), "", leftInfo.Size(), leftModTime
+		return true, "hash left: " + err.Error(), "", leftSize, leftModTime
 	}
 	rightHash, err := hashFile(rightPath, hashAlg, threshold)
 	if err != nil {
-		return true, "hash right: " + err.Error(), "", leftInfo.Size(), leftModTime
+		return true, "hash right: " + err.Error(), "", leftSize, leftModTime
 	}
 	if leftHash == rightHash {
 		return false, "", "", 0, time.Time{}
 	}
-	return true, "content differs", leftHash, leftInfo.Size(), leftModTime
+	return true, "content differs", leftHash, leftSize, leftModTime
 }
 
 // RunWorkers starts numWorkers workers that read from pairCh, compare each pair, and send to resultCh.
-func RunWorkers(leftRoot, rightRoot string, numWorkers int, hashAlg string, threshold int, pairCh <-chan string, resultCh chan<- DiffResult, progress *ProgressCounts) {
-	workCh := make(chan string, numWorkers*2)
+func RunWorkers(leftRoot, rightRoot string, numWorkers int, hashAlg string, threshold int, pairCh <-chan PairJob, resultCh chan<- DiffResult, progress *ProgressCounts) {
+	workCh := make(chan PairJob, numWorkers*2)
 	var wg sync.WaitGroup
 	for workerIdx := 0; workerIdx < numWorkers; workerIdx++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for rel := range workCh {
-				diff, reason, hashStr, size, mtime := comparePair(leftRoot, rightRoot, rel, hashAlg, threshold)
+			for job := range workCh {
+				diff, reason, hashStr, size, mtime := comparePair(leftRoot, rightRoot, job.Rel, hashAlg, threshold, job.Cached)
 				if diff {
-					resultCh <- DiffResult{Rel: rel, Reason: reason, Hash: hashStr, Size: size, Mtime: mtime}
+					resultCh <- DiffResult{Rel: job.Rel, Reason: reason, Hash: hashStr, Size: size, Mtime: mtime}
 				}
 				if progress != nil {
 					atomic.AddInt32(&progress.Processed, 1)
@@ -81,12 +92,12 @@ func RunWorkers(leftRoot, rightRoot string, numWorkers int, hashAlg string, thre
 		}()
 	}
 	go func() {
-		for rel := range pairCh {
+		for job := range pairCh {
 			if progress != nil {
 				atomic.AddInt32(&progress.Enqueued, 1)
 				atomic.CompareAndSwapInt64(&progress.StartTimeUnixNano, 0, time.Now().UnixNano())
 			}
-			workCh <- rel
+			workCh <- job
 		}
 		close(workCh)
 		wg.Wait()

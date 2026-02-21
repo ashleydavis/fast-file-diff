@@ -96,11 +96,16 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	pairPaths := set.PairPaths()
 	progressCounts.TotalPairs = int32(len(pairPaths))
 
-	// Phase 2: compare all pairs; workers read from pairCh.
-	pairCh := make(chan string, len(pairPaths)+1)
+	// Phase 2: compare all pairs; workers read from pairCh (with cached size/mtime when available).
+	pairJobs := make([]lib.PairJob, 0, len(pairPaths))
+	for _, rel := range pairPaths {
+		cached, _ := set.PairCachedInfo(rel)
+		pairJobs = append(pairJobs, lib.PairJob{Rel: rel, Cached: cached})
+	}
+	pairCh := make(chan lib.PairJob, len(pairJobs)+1)
 	go func() {
-		for _, rel := range pairPaths {
-			pairCh <- rel
+		for _, job := range pairJobs {
+			pairCh <- job
 		}
 		close(pairCh)
 	}()

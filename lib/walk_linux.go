@@ -5,18 +5,19 @@ package lib
 import (
 	"os"
 	"path/filepath"
+	"time"
 )
 
 const defaultDirBatchSize = 4096
 
-func walkTreeWithBatch(root string, batchSize int, fn func(rel string, isDir bool)) {
+func walkTreeWithBatch(root string, batchSize int, fn WalkFileFunc) {
 	if batchSize <= 0 {
 		batchSize = defaultDirBatchSize
 	}
 	walkTreeBatched(root, "", root, batchSize, fn)
 }
 
-func walkTreeBatched(absRoot, relDir, root string, batchSize int, fn func(rel string, isDir bool)) {
+func walkTreeBatched(absRoot, relDir, root string, batchSize int, fn WalkFileFunc) {
 	dirFile, err := os.Open(absRoot)
 	if err != nil {
 		return
@@ -40,7 +41,7 @@ func walkTreeBatched(absRoot, relDir, root string, batchSize int, fn func(rel st
 				relPath = filepath.Join(relDir, name)
 			}
 			if entry.IsDir() {
-				fn(relPath, true)
+				fn(relPath, true, 0, time.Time{})
 				subAbs := filepath.Join(absRoot, name)
 				walkTreeBatched(subAbs, relPath, root, batchSize, fn)
 				continue
@@ -49,7 +50,7 @@ func walkTreeBatched(absRoot, relDir, root string, batchSize int, fn func(rel st
 				continue
 			}
 			if entry.Mode().IsRegular() {
-				fn(relPath, false)
+				fn(relPath, false, entry.Size(), entry.ModTime())
 			}
 		}
 	}

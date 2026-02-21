@@ -2,6 +2,6 @@
 
 package lib
 
-func walkTreeWithBatch(root string, _ int, fn func(rel string, isDir bool)) {
+func walkTreeWithBatch(root string, _ int, fn WalkFileFunc) {
 	walkTreePortable(root, fn)
 }
