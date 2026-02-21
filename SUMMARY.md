@@ -190,3 +190,13 @@ FAIL
 3. **Cursor rule** (`.cursor/rules/spec.mdc`) — Updated to require running `./check.sh` before each commit and to state explicitly: "Do not skip this step or run only build or only smoke tests."
 
 So the pre-commit requirement is now one command (`./check.sh`), and both the plan and the AI rule require it. This makes it harder to skip the unit-test step and commit anyway.
+
+---
+
+## Fix: TestDiscoveredSet_bothSidesNoOnly
+
+**What I did:** In `discover.go`, in `Add()`, when the current call completes a pair (the other side already has the path), I now record the path on the current side and return `true` only the first time the pair is formed. Concretely: for `sideLeft`, if `s.right[rel]` then set `firstTime := !s.left[rel]`, set `s.left[rel] = true`, return `firstTime`; same idea for `sideRight` with `s.right[rel]`.
+
+**Why:** The test requires that after adding the same path to both sides, `LeftOnlyPaths()` and `RightOnlyPaths()` are empty. The previous code returned true when it detected a pair but never wrote the current side’s map, so the path appeared only on one side. A first version of the fix wrote the current side and always returned true when the other side had it, which broke `TestDiscoveredSet_addBothFormsPair` (adding the same path on the same side again must not return true). So the fix also returns true only when the current side did not already have the path (`firstTime`).
+
+**How it fixed the problem:** Both sides are now updated whenever a pair is formed, so `LeftOnlyPaths()` and `RightOnlyPaths()` are correct; and we return true only on the first completion of a pair, so repeated Add of the same path on one side does not report a new pair.

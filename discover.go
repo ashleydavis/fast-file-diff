@@ -38,13 +38,17 @@ func (s *discoveredSet) Add(rel string, sd side) bool {
 	switch sd {
 	case sideLeft:
 		if s.right[rel] {
-			return true
+			firstTime := !s.left[rel]
+			s.left[rel] = true
+			return firstTime
 		}
 		s.left[rel] = true
 		return false
 	case sideRight:
 		if s.left[rel] {
-			return true
+			firstTime := !s.right[rel]
+			s.right[rel] = true
+			return firstTime
 		}
 		s.right[rel] = true
 		return false
