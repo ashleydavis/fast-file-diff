@@ -33,7 +33,12 @@ This document is updated after each commit: what was done, how it went, and any 
 - **How it went:** All tests and smoke passed.
 - **Problems:** None.
 
-*(Continue for Commits 6–19; add entries as you complete each commit.)*
+### Commit 6: Walk both trees in parallel and feed queue
+- **What I did:** Added walkBothTrees (two goroutines, WaitGroup, pairCh); each walk logs dir/file and for files calls set.Add(rel, side), sending rel to pairCh when pair forms; main drains pairCh and logs pairs. Smoke test identical-dirs (same files, exit 0, no stdout).
+- **How it went:** Build, tests, smoke passed.
+- **Problems:** None.
+
+*(Continue for Commits 7–19; add entries as you complete each commit.)*
 
 ---
 
