@@ -63,7 +63,22 @@ This document is updated after each commit: what was done, how it went, and any 
 - **How it went:** All tests and smoke passed.
 - **Problems:** None.
 
-*(Continue for Commits 12–19; add entries as you complete each commit.)*
+### Commit 12: Output format table
+- **What I did:** formatTable (tab-separated columns path, size, mtime, reason, hash); --format table; smoke format-table.
+- **How it went:** Passed.
+- **Problems:** None.
+
+### Commit 13: Output format JSON
+- **What I did:** formatJSON (array of objects); --format json; smoke format-json (python3 json.load).
+- **How it went:** Passed.
+- **Problems:** None.
+
+### Commit 14: Output format YAML
+- **What I did:** formatYAML (gopkg.in/yaml.v3); --format yaml; smoke format-yaml.
+- **How it went:** Passed.
+- **Problems:** None.
+
+*(Continue for Commits 15–19; add entries as you complete each commit.)*
 
 ---
 
