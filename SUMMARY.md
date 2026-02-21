@@ -28,7 +28,12 @@ This document is updated after each commit: what was done, how it went, and any 
 - **How it went:** Build, tests, smoke passed.
 - **Problems:** None.
 
-*(Continue for Commits 5–19; add entries as you complete each commit.)*
+### Commit 5: Walk one tree and log entries
+- **What I did:** Added walk.go: walkTree(root, fn) with filepath.WalkDir; regular files and dirs only, include dotfiles; callback(rel, isDir). Unit tests for path collection and regular-files-only. Wired walk of left tree in main with logger.Log for each dir/file.
+- **How it went:** All tests and smoke passed.
+- **Problems:** None.
+
+*(Continue for Commits 6–19; add entries as you complete each commit.)*
 
 ---
 

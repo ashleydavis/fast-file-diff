@@ -27,7 +27,7 @@ This document lists commits in order. Each commit is a single, buildable change 
 
 **Smoke tests as you go:** Write smoke tests as you go where possible. For each commit that introduces behavior testable via the CLI (`bin/ffd`), add a smoke test in that commit. Introduce or extend the smoke test harness when needed so new tests can run. The "Before each commit" check runs smoke tests once the harness exists (from Commit 1 onward).
 
-- **Next:** Commit 5
+- **Next:** Commit 6
 
 ---
 
@@ -75,7 +75,7 @@ This document lists commits in order. Each commit is a single, buildable change 
 - Unit tests for set and pair formation (e.g. testdata dirs).
 - Add smoke test: run with two dirs where one path is invalid or missing; expect exit 1 or 2 and clear error.
 
-## - [ ] Commit 5: Walk one tree and log entries
+## - [x] Commit 5: Walk one tree and log entries
 
 **Message:** Walk one tree and log entries
 
