@@ -18,7 +18,12 @@ This document is updated after each commit: what was done, how it went, and any 
 - **How it went:** Unit tests for NewLogger, Log, LogError/NonFatalCount; build and smoke tests passed.
 - **Problems:** None.
 
-*(Continue for Commits 3–19; add entries as you complete each commit.)*
+### Commit 3: Path representation and safety
+- **What I did:** Added path.go: resolvePath(root, rel) with pathUnder to reject escapes; pathPool with Intern() for deduping relative path strings. Unit tests for resolvePath (under root, empty, rejects ..) and pathPool.Intern.
+- **How it went:** All tests passed. No smoke test required for this commit.
+- **Problems:** None.
+
+*(Continue for Commits 4–19; add entries as you complete each commit.)*
 
 ---
 
