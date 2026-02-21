@@ -43,3 +43,29 @@ func TestHashFile_sameContentSameHash(t *testing.T) {
 		t.Errorf("same content should have same hash: %q vs %q", ha, hb)
 	}
 }
+
+func TestHashBytes_xxhash(t *testing.T) {
+	data := []byte("hello")
+	h, err := hashBytes(data, "xxhash")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(h) != 16 {
+		t.Errorf("xxhash hex len = %d", len(h))
+	}
+	same, _ := hashBytes(data, "xxhash")
+	if h != same {
+		t.Error("hashBytes same input should give same output")
+	}
+}
+
+func TestHashBytes_md5(t *testing.T) {
+	data := []byte("hello")
+	h, err := hashBytes(data, "md5")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(h) != 32 {
+		t.Errorf("md5 hex len = %d", len(h))
+	}
+}

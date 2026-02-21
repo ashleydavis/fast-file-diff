@@ -44,6 +44,25 @@ func TestResolvePath_rejectsEscapingRoot(t *testing.T) {
 	}
 }
 
+func TestPathUnder_underRoot(t *testing.T) {
+	root := filepath.Clean(t.TempDir())
+	sub := filepath.Join(root, "a", "b")
+	if !pathUnder(sub, root) {
+		t.Error("pathUnder(sub, root) want true")
+	}
+	if !pathUnder(root, root) {
+		t.Error("pathUnder(root, root) want true")
+	}
+}
+
+func TestPathUnder_escapesRoot(t *testing.T) {
+	root := filepath.Clean(t.TempDir())
+	escape := filepath.Join(root, "..", "other")
+	if pathUnder(escape, root) {
+		t.Error("pathUnder(escape, root) want false")
+	}
+}
+
 func TestPathPool_Intern_dedupe(t *testing.T) {
 	pool := newPathPool()
 	a := pool.Intern("foo/bar")

@@ -66,3 +66,17 @@ func TestLogger_LogError_writesBothAndIncrementsCount(t *testing.T) {
 		t.Errorf("NonFatalCount() = %d, want 2", logger.NonFatalCount())
 	}
 }
+
+func TestLogger_Close_returnsNil(t *testing.T) {
+	logger, err := NewLogger()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := logger.Close(); err != nil {
+		t.Errorf("Close() = %v", err)
+	}
+	// Second Close is no-op (files already nil)
+	if err := logger.Close(); err != nil {
+		t.Errorf("second Close() = %v", err)
+	}
+}

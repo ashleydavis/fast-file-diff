@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/spf13/cobra"
 )
 
 func TestEnsureDir_validDirectory(t *testing.T) {
@@ -34,6 +36,22 @@ func TestEnsureDir_fileNotDir(t *testing.T) {
 	}
 	if err := ensureDir(f); err == nil {
 		t.Error("ensureDir(file) = nil, want error")
+	}
+}
+
+func TestRequireZeroOrTwoArgs(t *testing.T) {
+	cmd := &cobra.Command{}
+	if err := requireZeroOrTwoArgs(cmd, nil); err != nil {
+		t.Errorf("requireZeroOrTwoArgs(nil) = %v", err)
+	}
+	if err := requireZeroOrTwoArgs(cmd, []string{"a", "b"}); err != nil {
+		t.Errorf("requireZeroOrTwoArgs([a,b]) = %v", err)
+	}
+	if err := requireZeroOrTwoArgs(cmd, []string{"only"}); err == nil {
+		t.Error("requireZeroOrTwoArgs([one]) want error")
+	}
+	if err := requireZeroOrTwoArgs(cmd, []string{"a", "b", "c"}); err == nil {
+		t.Error("requireZeroOrTwoArgs([a,b,c]) want error")
 	}
 }
 
