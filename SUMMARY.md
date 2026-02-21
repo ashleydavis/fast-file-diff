@@ -255,3 +255,23 @@ Test data lives under `test/` (e.g. `five-same-left`, `five-same-right`, `five-o
 **Why:** The follow-up plan required that all variable, function, and file names be long and descriptive for readability and maintainability.
 
 **What it accomplishes:** Code is easier to read and maintain; no new tests required (behavior unchanged); build and all tests pass.
+
+---
+
+## FOLLOWUP Commit 5: Unit test coverage — every function exercised
+
+**What was done:** Added unit tests for functions that had no direct coverage: TestPathUnder_underRoot and TestPathUnder_escapesRoot (path.go pathUnder); TestHashBytes_xxhash and TestHashBytes_md5 (hash.go hashBytes); TestLogger_Close_returnsNil (logger.go Close); TestFormatTable_columnsAndRows and TestFormatTextTree_sortedOutput (output.go formatTable, formatTextTree); TestRequireZeroOrTwoArgs (main.go requireZeroOrTwoArgs). Created output_test.go. All other functions were already exercised by existing tests or by integration (e.g. runWorkers via smoke tests).
+
+**Why:** The follow-up plan required that every function have at least one unit test that exercises it.
+
+**What it accomplishes:** Broader unit test coverage; build and all unit and smoke tests pass.
+
+---
+
+## FOLLOWUP Commit 6: Smoke test coverage — every feature exercised
+
+**What was done:** Added smoke tests for features that had no dedicated test: usage-exit1 (one argument → exit 1 for usage error), hash-sha256 (--hash sha256, same/different content), hash-md5 (--hash md5, same/different content). Registered the three new tests in smoke-tests.sh. All 23 smoke tests pass.
+
+**Why:** The follow-up plan required that every feature have at least one smoke test that exercises it; exit code 1 (usage) and --hash sha256/md5 were previously uncovered.
+
+**What it accomplishes:** Exit 1 and all three hash algorithms are now covered by smoke tests; build and all tests pass.

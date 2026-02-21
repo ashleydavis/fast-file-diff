@@ -6,7 +6,7 @@
 set -e
 
 # Add test names here; each should have a corresponding ./test/smoke-<name>.sh
-TESTS=(help two-empty-dirs invalid-dir identical-dirs one-diff same-size-diff-mtime hash-xxhash format-text format-table format-json format-yaml quiet left-only right-only five-same five-one-diff five-two-diff-left five-two-diff-right five-one-left-only five-one-right-only)
+TESTS=(help two-empty-dirs invalid-dir usage-exit1 identical-dirs one-diff same-size-diff-mtime hash-xxhash hash-sha256 hash-md5 format-text format-table format-json format-yaml quiet left-only right-only five-same five-one-diff five-two-diff-left five-two-diff-right five-one-left-only five-one-right-only)
 
 build_first() {
   ./build.sh
