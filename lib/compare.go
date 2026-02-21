@@ -27,9 +27,9 @@ type ProgressCounts struct {
 	TotalPairs        int32
 }
 
-func comparePair(leftRoot, rightRoot, rel, hashAlg string, threshold int, cached *PairInfo) (different bool, reason string, hashStr string, size int64, mtime time.Time) {
-	leftPath := filepath.Join(leftRoot, rel)
-	rightPath := filepath.Join(rightRoot, rel)
+func comparePair(leftRoot, rightRoot, relativePath string, hashAlg string, threshold int, cached *PairInfo) (different bool, reason string, hashStr string, size int64, mtime time.Time) {
+	leftPath := filepath.Join(leftRoot, relativePath)
+	rightPath := filepath.Join(rightRoot, relativePath)
 	if cached == nil {
 		panic("comparePair: missing file info (cached is nil); discovery walk must provide PairInfo for every pair")
 	}
