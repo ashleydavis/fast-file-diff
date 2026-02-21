@@ -27,7 +27,7 @@ This document lists commits in order. Each commit is a single, buildable change 
 
 **Smoke tests as you go:** Write smoke tests as you go where possible. For each commit that introduces behavior testable via the CLI (`bin/ffd`), add a smoke test in that commit. Introduce or extend the smoke test harness when needed so new tests can run. The "Before each commit" check runs smoke tests once the harness exists (from Commit 1 onward).
 
-- **Next:** Commit 8
+- **Next:** Commit 9
 
 ---
 
@@ -104,7 +104,7 @@ This document lists commits in order. Each commit is a single, buildable change 
 - On Linux, use batched directory reads (e.g. getdents64) with configurable batch size; guard with build tag or runtime check.
 - Keep portable fallback for non-Linux.
 
-## - [ ] Commit 8: Worker pool and queue processing
+## - [x] Commit 8: Worker pool and queue processing
 
 **Message:** Worker pool and queue processing
 

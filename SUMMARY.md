@@ -43,7 +43,12 @@ This document is updated after each commit: what was done, how it went, and any 
 - **How it went:** Build, tests, smoke passed on Linux.
 - **Problems:** None.
 
-*(Continue for Commits 8–19; add entries as you complete each commit.)*
+### Commit 8: Worker pool and queue processing
+- **What I did:** Added --workers flag (default NumCPU); compare.go with comparePair (size+mtime), runWorkers (N workers from pairCh, resultCh), progressCounts; progress loop on stderr when TTY; main runs walkBothTrees, runWorkers, collects DiffResults and prints to stdout; smoke one-diff; unit tests for comparePair.
+- **How it went:** Build, tests, smoke passed.
+- **Problems:** None.
+
+*(Continue for Commits 9–19; add entries as you complete each commit.)*
 
 ---
 
