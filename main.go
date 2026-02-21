@@ -50,8 +50,16 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "right directory: %v\n", err)
 		os.Exit(ExitFatal)
 	}
+	logger, err := NewLogger()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "logger: %v\n", err)
+		os.Exit(ExitFatal)
+	}
+	defer logger.Close()
+	defer logger.PrintLogPaths()
 	_ = left
 	_ = right
+	logger.Log("started comparison")
 	// No diff logic yet; exit after validation.
 	return nil
 }
