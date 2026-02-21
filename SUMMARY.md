@@ -14,9 +14,9 @@ This document is updated after each commit: what was done, how it went, and any 
 - **Problems:** None.
 
 ### Commit 2: Add logging layer (Logger)
-- **What I did:** *(fill in)*
-- **How it went:** *(fill in)*
-- **Problems:** *(none / describe)*
+- **What I did:** Added Logger struct (temp dir, main + error log files with date/sequence names), Log/LogError/Fatal/PrintLogPaths/NonFatalCount/Close; isTTY to skip PrintLogPaths when not TTY; created Logger after validation in root and call PrintLogPaths before exit; smoke test two-empty-dirs.
+- **How it went:** Unit tests for NewLogger, Log, LogError/NonFatalCount; build and smoke tests passed.
+- **Problems:** None.
 
 *(Continue for Commits 3–19; add entries as you complete each commit.)*
 
