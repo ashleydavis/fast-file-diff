@@ -13,6 +13,7 @@ A fast CLI that reports which files differ between two directories (by path and 
 | `smoke-tests.sh <test-name>` | Run one smoke test |
 | `smoke-tests.sh ls` | List tests that can be run individually |
 | `perf-test.sh` | Run performance tests (optimized build; generates data under `./test/perf/tmp/`, appends to `./perf/perf-results.csv`; may take a long time) |
+| `check-vulnerabilities.sh` | Run vulnerability checks (go mod verify, govulncheck if installed) and write results to `VULNERABILITIES.md` |
 
 See [SPEC.md](SPEC.md) for full details on each script.
 

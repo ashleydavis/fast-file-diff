@@ -235,3 +235,13 @@ Test data lives under `test/` (e.g. `five-same-left`, `five-same-right`, `five-o
 **Why:** The follow-up plan required CSV rows to record only the average time per pair and to separate output (perf/) from temporary data (test/perf/tmp/).
 
 **What it accomplishes:** Perf results are easier to chart (one metric per row); temp data no longer mixes with other test data; CSV and script behavior are documented in README.
+
+---
+
+## FOLLOWUP Commit 3: Vulnerability check script and VULNERABILITIES.md
+
+**What was done:** Added `check-vulnerabilities.sh` that runs `go mod verify` and `govulncheck ./...` (if installed) and overwrites `VULNERABILITIES.md` with the date of the run and the output of each check. If govulncheck is not installed, the script documents that and skips it. README Scripts table updated to list the new script.
+
+**Why:** The follow-up plan required a script to check for vulnerabilities and document findings in a single place (VULNERABILITIES.md).
+
+**What it accomplishes:** Users and developers can run one script to refresh the vulnerability report; results are in VULNERABILITIES.md for audit or CI.

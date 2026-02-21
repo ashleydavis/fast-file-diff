@@ -21,13 +21,13 @@ This document lists follow-up commits in order. Each commit is a single, buildab
 
 **Progress:** Mark the current commit below (e.g. set "Next: Commit N") and check off commits as you complete them (`[x]`).
 
-- **Next:** Commit 1 (progress indicator time estimate)
+- **Next:** Commit 3 (vulnerability script and VULNERABILITIES.md)
 
 **Final step:** Commit 9 verifies build, all tests, and README completeness before closing the plan.
 
 ---
 
-## - [ ] Commit 1: Progress indicator — estimate time remaining
+## - [x] Commit 1: Progress indicator — estimate time remaining
 
 **Message:** Progress indicator: estimate time remaining from average time per file
 
@@ -42,7 +42,7 @@ This document lists follow-up commits in order. Each commit is a single, buildab
 
 ---
 
-## - [ ] Commit 2: Perf CSV format and directory layout
+## - [x] Commit 2: Perf CSV format and directory layout
 
 **Message:** Perf: CSV records as avg time per pair only; move CSV to perf/, temp files to test/perf/tmp/
 
