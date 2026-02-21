@@ -12,36 +12,47 @@ import (
 type DiffResult struct {
 	Rel    string
 	Reason string
+	Hash   string
 }
 
-// comparePair stats both files; returns (true, reason) if different, (false, "") if same.
-// Uses size and mtime only (same size + same mtime → same).
-func comparePair(leftRoot, rightRoot, rel string) (different bool, reason string) {
+// comparePair stats both files; returns (true, reason, hash) if different, (false, "", "") if same.
+// When same size but mtime differs, hashes content and reports "content differs" with hash.
+func comparePair(leftRoot, rightRoot, rel, hashAlg string, threshold int) (different bool, reason string, hashStr string) {
 	leftPath := filepath.Join(leftRoot, rel)
 	rightPath := filepath.Join(rightRoot, rel)
 	li, err := os.Stat(leftPath)
 	if err != nil {
-		return true, "stat left: " + err.Error()
+		return true, "stat left: " + err.Error(), ""
 	}
 	ri, err := os.Stat(rightPath)
 	if err != nil {
-		return true, "stat right: " + err.Error()
+		return true, "stat right: " + err.Error(), ""
 	}
 	if li.Size() != ri.Size() {
-		return true, "size changed"
+		return true, "size changed", ""
 	}
-	// Normalize mtime to seconds for cross-filesystem consistency
 	lm := li.ModTime().Truncate(time.Second)
 	rm := ri.ModTime().Truncate(time.Second)
-	if !lm.Equal(rm) {
-		return true, "mtime differs" // will trigger hash in next commit
+	if lm.Equal(rm) {
+		return false, "", ""
 	}
-	return false, ""
+	// Same size, different mtime: hash both
+	hL, err := hashFile(leftPath, hashAlg, threshold)
+	if err != nil {
+		return true, "hash left: " + err.Error(), ""
+	}
+	hR, err := hashFile(rightPath, hashAlg, threshold)
+	if err != nil {
+		return true, "hash right: " + err.Error(), ""
+	}
+	if hL == hR {
+		return false, "", ""
+	}
+	return true, "content differs", hL
 }
 
 // runWorkers starts n workers that read from pairCh, compare each pair, and send to resultCh.
-// When pairCh is closed and all work is done, resultCh is closed.
-func runWorkers(leftRoot, rightRoot string, n int, pairCh <-chan string, resultCh chan<- DiffResult, progress *progressCounts) {
+func runWorkers(leftRoot, rightRoot string, n int, hashAlg string, threshold int, pairCh <-chan string, resultCh chan<- DiffResult, progress *progressCounts) {
 	workCh := make(chan string, n*2)
 	var wg sync.WaitGroup
 	for i := 0; i < n; i++ {
@@ -49,9 +60,9 @@ func runWorkers(leftRoot, rightRoot string, n int, pairCh <-chan string, resultC
 		go func() {
 			defer wg.Done()
 			for rel := range workCh {
-				diff, reason := comparePair(leftRoot, rightRoot, rel)
+				diff, reason, hashStr := comparePair(leftRoot, rightRoot, rel, hashAlg, threshold)
 				if diff {
-					resultCh <- DiffResult{Rel: rel, Reason: reason}
+					resultCh <- DiffResult{Rel: rel, Reason: reason, Hash: hashStr}
 				}
 				if progress != nil {
 					atomic.AddInt32(&progress.processed, 1)

@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Same size, different mtime → diff reported (mtime differs)
+# Same size, different content (and mtime) → diff reported (content differs)
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN="${SCRIPT_DIR}/../bin/ffd"
 LEFT="${SCRIPT_DIR}/mtime-left"
 RIGHT="${SCRIPT_DIR}/mtime-right"
 mkdir -p "$LEFT" "$RIGHT"
-echo "same" > "$LEFT/f"
-echo "same" > "$RIGHT/f"
-touch -d "2020-01-01" "$RIGHT/f" 2>/dev/null || true
+echo "aa" > "$LEFT/f"
+sleep 1
+echo "bb" > "$RIGHT/f"
 out=$("$BIN" "$LEFT" "$RIGHT" 2>/dev/null)
 exitcode=$?
 if [[ $exitcode -ne 0 ]]; then
@@ -16,6 +16,6 @@ if [[ $exitcode -ne 0 ]]; then
   exit 1
 fi
 if ! echo "$out" | grep -q "diff:"; then
-  echo "Expected 'diff:' for same-size different-mtime, got: $out" >&2
+  echo "Expected 'diff:' for same-size different-content, got: $out" >&2
   exit 1
 fi

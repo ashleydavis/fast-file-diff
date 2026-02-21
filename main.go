@@ -28,6 +28,8 @@ func main() {
 
 var dirBatchSize int
 var numWorkers int
+var hashAlg string
+var hashThreshold int
 
 var rootCmd = &cobra.Command{
 	Use:   "ffd <left-dir> <right-dir>",
@@ -40,6 +42,8 @@ var rootCmd = &cobra.Command{
 func init() {
 	rootCmd.Flags().IntVar(&dirBatchSize, "dir-batch-size", 4096, "On Linux: batch size for directory reads (entries per syscall)")
 	rootCmd.Flags().IntVar(&numWorkers, "workers", runtime.NumCPU(), "Number of worker goroutines for comparing file pairs")
+	rootCmd.Flags().StringVar(&hashAlg, "hash", "xxhash", "Hash algorithm for content comparison: xxhash, sha256, md5")
+	rootCmd.Flags().IntVar(&hashThreshold, "threshold", 10*1024*1024, "Size threshold in bytes: files smaller are read in full to hash, larger are streamed")
 }
 
 func requireZeroOrTwoArgs(cmd *cobra.Command, args []string) error {
@@ -77,7 +81,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	resultCh := make(chan DiffResult, 256)
 	progress := &progressCounts{}
 	go walkBothTrees(left, right, dirBatchSize, logger, set, pairCh)
-	runWorkers(left, right, numWorkers, pairCh, resultCh, progress)
+	runWorkers(left, right, numWorkers, hashAlg, hashThreshold, pairCh, resultCh, progress)
 	doneCh := make(chan struct{})
 	if isTTY(os.Stderr) {
 		go progressLoop(progress, doneCh)
@@ -86,7 +90,11 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	for r := range resultCh {
 		diffs = append(diffs, r)
 		logger.Log("diff: " + r.Rel + " " + r.Reason)
-		fmt.Fprintf(os.Stdout, "diff: %s (%s)\n", r.Rel, r.Reason)
+		if r.Hash != "" {
+			fmt.Fprintf(os.Stdout, "diff: %s (%s) %s\n", r.Rel, r.Reason, r.Hash)
+		} else {
+			fmt.Fprintf(os.Stdout, "diff: %s (%s)\n", r.Rel, r.Reason)
+		}
 	}
 	close(doneCh)
 	return nil
