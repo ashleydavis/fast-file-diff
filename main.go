@@ -7,6 +7,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const pairQueueCap = 10000
+
 // Exit code constants per SPEC (CLI / help).
 const (
 	ExitSuccess   = 0
@@ -58,15 +60,14 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	defer logger.Close()
 	defer logger.PrintLogPaths()
 	logger.Log("started comparison")
-	walkTree(left, func(rel string, isDir bool) {
-		if isDir {
-			logger.Log("dir: " + rel)
-		} else {
-			logger.Log("file: " + rel)
-		}
-	})
-	_ = right
-	// No diff logic yet; single tree walk and log only.
+	pool := newPathPool()
+	set := newDiscoveredSet(pool)
+	pairCh := make(chan string, pairQueueCap)
+	go walkBothTrees(left, right, logger, set, pairCh)
+	for rel := range pairCh {
+		logger.Log("pair: " + rel)
+	}
+	// No comparison yet; pairs are discovered and logged only.
 	return nil
 }
 

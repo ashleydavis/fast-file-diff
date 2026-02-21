@@ -3,6 +3,7 @@ package main
 import (
 	"io/fs"
 	"path/filepath"
+	"sync"
 )
 
 // walkTree walks root recursively and calls fn for each directory and regular file
@@ -36,4 +37,29 @@ func walkTree(root string, fn func(rel string, isDir bool)) {
 		fn(rel, false)
 		return nil
 	})
+}
+
+// walkBothTrees walks left and right in parallel, logs every dir/file to logger,
+// feeds the discovered set and sends pair relative paths to pairCh when both sides have the file.
+// Closes pairCh when both walks are done.
+func walkBothTrees(leftRoot, rightRoot string, log *Logger, set *discoveredSet, pairCh chan<- string) {
+	var wg sync.WaitGroup
+	walkOne := func(root string, sd side) {
+		defer wg.Done()
+		walkTree(root, func(rel string, isDir bool) {
+			if isDir {
+				log.Log("dir: " + rel)
+			} else {
+				log.Log("file: " + rel)
+				if set.Add(rel, sd) {
+					pairCh <- rel
+				}
+			}
+		})
+	}
+	wg.Add(2)
+	go walkOne(leftRoot, sideLeft)
+	go walkOne(rightRoot, sideRight)
+	wg.Wait()
+	close(pairCh)
 }
