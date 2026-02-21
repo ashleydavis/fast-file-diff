@@ -93,6 +93,8 @@ This document is updated after each commit: what was done, how it went, and any 
 - **How it went:** Script and CSV added; full perf run not executed (long-running).
 - **Problems:** None.
 
+**Process note:** Implementation went off the rails from commit 15 onward. Commits 15 and 16 were never checked off in IMPLEMENTATION.md even though the work was committed, and I incorrectly said we were “up to 17” before the plan was updated. The plan and SUMMARY were later corrected to check off 15–17 and set Next to Commit 18.
+
 *(Continue for Commits 18–19; then update Alignment with SPEC.)*
 
 ---
