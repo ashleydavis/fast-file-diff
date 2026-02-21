@@ -27,7 +27,7 @@ This document lists commits in order. Each commit is a single, buildable change 
 
 **Smoke tests as you go:** Write smoke tests as you go where possible. For each commit that introduces behavior testable via the CLI (`bin/ffd`), add a smoke test in that commit. Introduce or extend the smoke test harness when needed so new tests can run. The "Before each commit" check runs smoke tests once the harness exists (from Commit 1 onward).
 
-- **Next:** Commit 11
+- **Next:** Commit 12
 
 ---
 
@@ -140,7 +140,7 @@ This document lists commits in order. Each commit is a single, buildable change 
 - Unit tests for hashing and comparison (at least for default and one other algorithm).
 - Add smoke test: run with `--hash xxhash` (and optionally `--hash sha256`); same content → no diff, different content → diff with hash in output.
 
-## - [ ] Commit 11: Output format: text (ASCII tree)
+## - [x] Commit 11: Output format: text (ASCII tree)
 
 **Message:** Output format: text (ASCII tree)
 

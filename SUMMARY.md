@@ -58,7 +58,12 @@ This document is updated after each commit: what was done, how it went, and any 
 - **How it went:** All tests and smoke passed.
 - **Problems:** None.
 
-*(Continue for Commits 11–19; add entries as you complete each commit.)*
+### Commit 11: Output format text (ASCII tree)
+- **What I did:** Extended DiffResult with Size, Mtime; formatTextTree in output.go (case-sensitive sort, ASCII tree, per-file size/mtime/reason/hash); --format flag (text default); smoke format-text.
+- **How it went:** All tests and smoke passed.
+- **Problems:** None.
+
+*(Continue for Commits 12–19; add entries as you complete each commit.)*
 
 ---
 
