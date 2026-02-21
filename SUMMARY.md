@@ -9,9 +9,9 @@ This document is updated after each commit: what was done, how it went, and any 
 *(For each commit, add a short entry: what you did, how it went, problems if any.)*
 
 ### Commit 1: Add Cobra and root command
-- **What I did:** *(fill in)*
-- **How it went:** *(fill in)*
-- **Problems:** *(none / describe)*
+- **What I did:** Added Cobra dependency; root command with two positional args (left, right); no args prints help to stdout and exits 0; `ensureDir` validates both paths (exit 2 on invalid); exit code constants 0/1/2/3; smoke harness and `smoke-help.sh` (no args → help).
+- **How it went:** Build, unit tests, and smoke test passed. TDD: wrote failing tests for `ensureDir` then implemented.
+- **Problems:** None.
 
 ### Commit 2: Add logging layer (Logger)
 - **What I did:** *(fill in)*

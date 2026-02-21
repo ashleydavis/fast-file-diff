@@ -27,11 +27,11 @@ This document lists commits in order. Each commit is a single, buildable change 
 
 **Smoke tests as you go:** Write smoke tests as you go where possible. For each commit that introduces behavior testable via the CLI (`bin/ffd`), add a smoke test in that commit. Introduce or extend the smoke test harness when needed so new tests can run. The "Before each commit" check runs smoke tests once the harness exists (from Commit 1 onward).
 
-- **Next:** Commit 1
+- **Next:** Commit 2
 
 ---
 
-## - [ ] Commit 1: Add Cobra and root command
+## - [x] Commit 1: Add Cobra and root command
 
 **Message:** Add Cobra and root command
 
