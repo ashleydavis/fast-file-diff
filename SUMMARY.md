@@ -23,7 +23,12 @@ This document is updated after each commit: what was done, how it went, and any 
 - **How it went:** All tests passed. No smoke test required for this commit.
 - **Problems:** None.
 
-*(Continue for Commits 4–19; add entries as you complete each commit.)*
+### Commit 4: Discovered-files set and pair formation
+- **What I did:** Added discoveredSet (map left/right by rel path, pathPool for interning); Add(rel, side) returns true when pair forms. Unit tests for pair formation, left-only, right-only, multiple pairs. Smoke test invalid-dir (exit 2, clear error).
+- **How it went:** Build, tests, smoke passed.
+- **Problems:** None.
+
+*(Continue for Commits 5–19; add entries as you complete each commit.)*
 
 ---
 
