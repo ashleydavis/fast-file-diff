@@ -101,6 +101,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		go discoveryProgressLoop(set, walkDoneCh, numWorkers, walkWorkerUtilization)
 	}
 	<-walkDoneCh
+	scanDuration := time.Since(startTime)
 
 	pairPaths := set.PairPaths()
 	totalCompared := len(pairPaths)
@@ -130,6 +131,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 
 	compareWorkerUtilization := lib.NewWorkerUtilization(numWorkers, utilWindowTicks)
 
+	compareStart := time.Now()
 	pairCh := make(chan lib.PairJob, len(pairJobs)+1)
 	go func() {
 		for _, job := range pairJobs {
@@ -148,6 +150,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		logger.Log("diff: " + diffResult.Rel + " " + diffResult.Reason)
 	}
 	close(compareDoneCh)
+	compareDuration := time.Since(compareStart)
 	differentCount := len(diffs)
 	sameCount := totalCompared - differentCount
 	if sameCount < 0 {
@@ -182,6 +185,8 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "  Files only on right:    %d\n", rightOnlyCount)
 		fmt.Fprintf(os.Stderr, "  Files different:        %d\n", differentCount)
 		fmt.Fprintf(os.Stderr, "  Files same:             %d\n", sameCount)
+		fmt.Fprintf(os.Stderr, "  Scanning:               %s\n", scanDuration.Round(time.Millisecond))
+		fmt.Fprintf(os.Stderr, "  Comparing:              %s\n", compareDuration.Round(time.Millisecond))
 		fmt.Fprintf(os.Stderr, "  Total time:             %s\n", elapsed.Round(time.Millisecond))
 		fmt.Fprintf(os.Stderr, "  Average per comparison: %s\n", avgPerComparison.Round(time.Microsecond))
 		fmt.Fprintf(os.Stderr, "  Workers utilized (did ≥1 compare): %d%%\n", compareWorkerUtilization.UtilizedPercentWholeRun())
