@@ -1,6 +1,6 @@
 //go:build linux
 
-package main
+package lib
 
 import (
 	"os"
@@ -9,7 +9,6 @@ import (
 
 const defaultDirBatchSize = 4096
 
-// walkTreeWithBatch on Linux uses batched directory reads (Readdir(n)) to reduce syscalls.
 func walkTreeWithBatch(root string, batchSize int, fn func(rel string, isDir bool)) {
 	if batchSize <= 0 {
 		batchSize = defaultDirBatchSize

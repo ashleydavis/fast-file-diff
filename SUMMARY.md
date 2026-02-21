@@ -275,3 +275,13 @@ Test data lives under `test/` (e.g. `five-same-left`, `five-same-right`, `five-o
 **Why:** The follow-up plan required that every feature have at least one smoke test that exercises it; exit code 1 (usage) and --hash sha256/md5 were previously uncovered.
 
 **What it accomplishes:** Exit 1 and all three hash algorithms are now covered by smoke tests; build and all tests pass.
+
+---
+
+## FOLLOWUP Commit 7: Move library code to lib/; only main.go in root
+
+**What was done:** Created `lib/` package and moved all library-style code into it: path.go (resolvePath, pathUnder, PathPool, EnsureDir), logger.go (Logger, NewLogger, IsTTY), discover.go (Side, DiscoveredSet, NewDiscoveredSet, Add, LeftOnlyPaths, RightOnlyPaths), hash.go (hashFile, hashBytes), compare.go (DiffResult, ProgressCounts, comparePair, RunWorkers), walk.go (walkTree, WalkBothTrees), walk_linux.go / walk_nonlinux.go (walkTreeWithBatch), output.go (FormatTextTree, FormatTable, FormatJSON, FormatYAML). main.go in root now imports `github.com/photosphere/fast-file-diff-go/lib` and uses lib types and functions; root contains only main.go and main_test.go. All library tests were moved or recreated under lib/ (path_test.go, logger_test.go, discover_test.go, walk_test.go, hash_test.go, compare_test.go, output_test.go). Removed the four TestEnsureDir_* tests from main_test.go (EnsureDir is tested in lib/path_test.go). Deleted from root: path.go, logger.go, discover.go, walk.go, walk_linux.go, walk_nonlinux.go, compare.go, hash.go, output.go and their _test.go files.
+
+**Why:** The follow-up plan required that all library code live under lib/ and only the CLI entrypoint remain in the project root for a clear separation of concerns.
+
+**What it accomplishes:** Project root holds only the CLI (main.go); all reusable logic is in lib/ with full unit tests; `go build .` and `go test ./...` and `./check.sh` pass.

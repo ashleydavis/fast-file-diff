@@ -1,7 +1,9 @@
-package main
+package lib
 
 import (
 	"errors"
+	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -31,18 +33,19 @@ func pathUnder(path, root string) bool {
 	return rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
-// pathPool interns relative path strings to avoid duplicates.
-type pathPool struct {
+// PathPool interns relative path strings to avoid duplicates.
+type PathPool struct {
 	mu   sync.Mutex
 	seen map[string]string
 }
 
-func newPathPool() *pathPool {
-	return &pathPool{seen: make(map[string]string)}
+// NewPathPool returns a new path pool.
+func NewPathPool() *PathPool {
+	return &PathPool{seen: make(map[string]string)}
 }
 
 // Intern returns the same string for equal inputs, deduplicating storage.
-func (p *pathPool) Intern(rel string) string {
+func (p *PathPool) Intern(rel string) string {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if cached, ok := p.seen[rel]; ok {
@@ -50,4 +53,19 @@ func (p *pathPool) Intern(rel string) string {
 	}
 	p.seen[rel] = rel
 	return rel
+}
+
+// EnsureDir returns nil if path is an existing directory; otherwise an error.
+func EnsureDir(path string) error {
+	if path == "" {
+		return fmt.Errorf("path is empty")
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("not a directory: %s", path)
+	}
+	return nil
 }

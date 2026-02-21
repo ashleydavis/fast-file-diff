@@ -21,7 +21,7 @@ This document lists follow-up commits in order. Each commit is a single, buildab
 
 **Progress:** Mark the current commit below (e.g. set "Next: Commit N") and check off commits as you complete them (`[x]`).
 
-- **Next:** Commit 3 (vulnerability script and VULNERABILITIES.md)
+- **Next:** Commit 8 (README quick start)
 
 **Final step:** Commit 9 verifies build, all tests, and README completeness before closing the plan.
 
@@ -56,7 +56,7 @@ This document lists follow-up commits in order. Each commit is a single, buildab
 
 ---
 
-## - [ ] Commit 3: Vulnerability check script and VULNERABILITIES.md
+## - [x] Commit 3: Vulnerability check script and VULNERABILITIES.md
 
 **Message:** Add vulnerability check script and document findings in VULNERABILITIES.md
 
@@ -69,7 +69,7 @@ This document lists follow-up commits in order. Each commit is a single, buildab
 
 ---
 
-## - [ ] Commit 4: Long descriptive names audit and fixes
+## - [x] Commit 4: Long descriptive names audit and fixes
 
 **Message:** Audit and fix names: ensure all variables, functions, and files are long and descriptive
 
@@ -81,7 +81,7 @@ This document lists follow-up commits in order. Each commit is a single, buildab
 
 ---
 
-## - [ ] Commit 5: Unit test coverage — every function exercised
+## - [x] Commit 5: Unit test coverage — every function exercised
 
 **Message:** Unit tests: ensure every function has one or more unit tests that exercise it
 
@@ -93,7 +93,7 @@ This document lists follow-up commits in order. Each commit is a single, buildab
 
 ---
 
-## - [ ] Commit 6: Smoke test coverage — every feature exercised
+## - [x] Commit 6: Smoke test coverage — every feature exercised
 
 **Message:** Smoke tests: ensure every feature has one or more smoke tests that exercise it
 
@@ -105,7 +105,7 @@ This document lists follow-up commits in order. Each commit is a single, buildab
 
 ---
 
-## - [ ] Commit 7: Move library code to lib/; only main.go in root
+## - [x] Commit 7: Move library code to lib/; only main.go in root
 
 **Message:** Move all library code to lib/; keep only main.go in project root
 

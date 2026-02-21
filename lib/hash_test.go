@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"os"
@@ -27,7 +27,6 @@ func TestHashFile_sha256(t *testing.T) {
 	if err != nil {
 		t.Fatalf("hashFile: %v", err)
 	}
-	// SHA256 hex is 64 chars
 	if len(h) != 64 {
 		t.Errorf("sha256 hex len = %d", len(h))
 	}

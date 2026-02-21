@@ -8,17 +8,17 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/photosphere/fast-file-diff-go/lib"
 	"github.com/spf13/cobra"
 )
 
 const pairQueueCap = 10000
 
-// Exit code constants per SPEC (CLI / help).
 const (
-	ExitSuccess   = 0
-	ExitUsage     = 1
-	ExitFatal     = 2
-	ExitNonFatal  = 3
+	ExitSuccess  = 0
+	ExitUsage    = 1
+	ExitFatal    = 2
+	ExitNonFatal = 3
 )
 
 func main() {
@@ -64,15 +64,15 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		return cmd.Usage()
 	}
 	left, right := args[0], args[1]
-	if err := ensureDir(left); err != nil {
+	if err := lib.EnsureDir(left); err != nil {
 		fmt.Fprintf(os.Stderr, "left directory: %v\n", err)
 		os.Exit(ExitFatal)
 	}
-	if err := ensureDir(right); err != nil {
+	if err := lib.EnsureDir(right); err != nil {
 		fmt.Fprintf(os.Stderr, "right directory: %v\n", err)
 		os.Exit(ExitFatal)
 	}
-	logger, err := NewLogger()
+	logger, err := lib.NewLogger()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "logger: %v\n", err)
 		os.Exit(ExitFatal)
@@ -82,18 +82,18 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		defer logger.PrintLogPaths()
 	}
 	logger.Log("started comparison")
-	pool := newPathPool()
-	set := newDiscoveredSet(pool)
+	pool := lib.NewPathPool()
+	set := lib.NewDiscoveredSet(pool)
 	pairCh := make(chan string, pairQueueCap)
-	resultCh := make(chan DiffResult, 256)
-	progress := &progressCounts{}
-	go walkBothTrees(left, right, dirBatchSize, logger, set, pairCh)
-	runWorkers(left, right, numWorkers, hashAlg, hashThreshold, pairCh, resultCh, progress)
+	resultCh := make(chan lib.DiffResult, 256)
+	progress := &lib.ProgressCounts{}
+	go lib.WalkBothTrees(left, right, dirBatchSize, logger, set, pairCh)
+	lib.RunWorkers(left, right, numWorkers, hashAlg, hashThreshold, pairCh, resultCh, progress)
 	doneCh := make(chan struct{})
-	if !quiet && isTTY(os.Stderr) {
+	if !quiet && lib.IsTTY(os.Stderr) {
 		go progressLoop(progress, doneCh)
 	}
-	var diffs []DiffResult
+	var diffs []lib.DiffResult
 	for diffResult := range resultCh {
 		diffs = append(diffs, diffResult)
 		logger.Log("diff: " + diffResult.Rel + " " + diffResult.Reason)
@@ -102,24 +102,24 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	for _, rel := range set.LeftOnlyPaths() {
 		path := filepath.Join(left, rel)
 		if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
-			diffs = append(diffs, DiffResult{Rel: rel, Reason: "left only", Size: info.Size(), Mtime: info.ModTime().Truncate(time.Second), LeftOnly: true})
+			diffs = append(diffs, lib.DiffResult{Rel: rel, Reason: "left only", Size: info.Size(), Mtime: info.ModTime().Truncate(time.Second), LeftOnly: true})
 		}
 	}
 	for _, rel := range set.RightOnlyPaths() {
 		path := filepath.Join(right, rel)
 		if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
-			diffs = append(diffs, DiffResult{Rel: rel, Reason: "right only", Size: info.Size(), Mtime: info.ModTime().Truncate(time.Second)})
+			diffs = append(diffs, lib.DiffResult{Rel: rel, Reason: "right only", Size: info.Size(), Mtime: info.ModTime().Truncate(time.Second)})
 		}
 	}
 	switch outputFormat {
 	case "table":
-		formatTable(diffs, os.Stdout)
+		lib.FormatTable(diffs, os.Stdout)
 	case "json":
-		formatJSON(diffs, os.Stdout)
+		lib.FormatJSON(diffs, os.Stdout)
 	case "yaml":
-		formatYAML(diffs, os.Stdout)
+		lib.FormatYAML(diffs, os.Stdout)
 	default:
-		formatTextTree(diffs, os.Stdout)
+		lib.FormatTextTree(diffs, os.Stdout)
 	}
 	if logger.NonFatalCount() > 0 {
 		if !quiet {
@@ -130,8 +130,6 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// estimateRemainingFromElapsed returns estimated remaining time from elapsed duration and processed/pending counts.
-// Used for testing; the progress loop uses estimateRemainingDuration which derives elapsed from start time.
 func estimateRemainingFromElapsed(elapsed time.Duration, processed, pending int32) time.Duration {
 	if processed <= 0 || pending <= 0 {
 		return 0
@@ -140,8 +138,6 @@ func estimateRemainingFromElapsed(elapsed time.Duration, processed, pending int3
 	return averagePerPair * time.Duration(pending)
 }
 
-// estimateRemainingDuration returns an estimate of time remaining based on processed count,
-// pending count, and start time. Returns zero if not enough data (processed <= 0, pending <= 0, or start not set).
 func estimateRemainingDuration(processed, pending int32, startTimeUnixNano int64) time.Duration {
 	if startTimeUnixNano == 0 {
 		return 0
@@ -150,7 +146,7 @@ func estimateRemainingDuration(processed, pending int32, startTimeUnixNano int64
 	return estimateRemainingFromElapsed(elapsed, processed, pending)
 }
 
-func progressLoop(p *progressCounts, doneCh <-chan struct{}) {
+func progressLoop(p *lib.ProgressCounts, doneCh <-chan struct{}) {
 	tick := time.NewTicker(100 * time.Millisecond)
 	defer tick.Stop()
 	for {
@@ -158,13 +154,13 @@ func progressLoop(p *progressCounts, doneCh <-chan struct{}) {
 		case <-doneCh:
 			return
 		case <-tick.C:
-			proc := atomic.LoadInt32(&p.processed)
-			enq := atomic.LoadInt32(&p.enqueued)
+			proc := atomic.LoadInt32(&p.Processed)
+			enq := atomic.LoadInt32(&p.Enqueued)
 			pending := enq - proc
 			if enq == 0 && proc == 0 {
 				continue
 			}
-			startNano := atomic.LoadInt64(&p.startTimeUnixNano)
+			startNano := atomic.LoadInt64(&p.StartTimeUnixNano)
 			remaining := estimateRemainingDuration(proc, pending, startNano)
 			if remaining > 0 {
 				fmt.Fprintf(os.Stderr, "\rprocessed %d, pending %d, ~%s remaining   ", proc, pending, remaining.Round(time.Second))
@@ -173,19 +169,4 @@ func progressLoop(p *progressCounts, doneCh <-chan struct{}) {
 			}
 		}
 	}
-}
-
-// ensureDir returns nil if path is an existing directory; otherwise an error.
-func ensureDir(path string) error {
-	if path == "" {
-		return fmt.Errorf("path is empty")
-	}
-	info, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-	if !info.IsDir() {
-		return fmt.Errorf("not a directory: %s", path)
-	}
-	return nil
 }

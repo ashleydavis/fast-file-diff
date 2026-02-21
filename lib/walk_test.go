@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"os"
@@ -37,7 +37,6 @@ func TestWalkTree_collectsRelativePaths(t *testing.T) {
 	if len(files) != 3 {
 		t.Errorf("expected 3 files, got %v", files)
 	}
-	// .hidden should be included (dotfiles)
 	hasHidden := false
 	for _, f := range files {
 		if filepath.Base(f) == ".hidden" {
@@ -55,8 +54,6 @@ func TestWalkTree_regularFilesOnly(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "f"), []byte("x"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	// Create a symlink - should be skipped (regular files only)
-	// On some systems we might not have symlink; skip if not
 	if err := os.Symlink("f", filepath.Join(root, "link")); err != nil {
 		t.Skip("symlink not supported")
 	}

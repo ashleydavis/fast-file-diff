@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"crypto/md5"
@@ -55,7 +55,7 @@ func hashStream(r io.Reader, algorithm string, bufSize int) (string, error) {
 	}
 	readBuffer := (*buf)[:bufSize]
 	switch algorithm {
-		case "xxhash":
+	case "xxhash":
 		hasher := xxhash.New()
 		for {
 			n, err := r.Read(readBuffer)

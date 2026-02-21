@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"os"
@@ -18,7 +18,14 @@ type DiffResult struct {
 	LeftOnly bool
 }
 
-// comparePair stats both files; returns (true, reason, hash, size, mtime) if different, (false, ...) if same.
+// ProgressCounts holds counters and start time for the progress indicator.
+// Exported fields so main can use atomic load for progress display.
+type ProgressCounts struct {
+	Enqueued          int32
+	Processed         int32
+	StartTimeUnixNano int64
+}
+
 func comparePair(leftRoot, rightRoot, rel, hashAlg string, threshold int) (different bool, reason string, hashStr string, size int64, mtime time.Time) {
 	leftPath := filepath.Join(leftRoot, rel)
 	rightPath := filepath.Join(rightRoot, rel)
@@ -52,8 +59,8 @@ func comparePair(leftRoot, rightRoot, rel, hashAlg string, threshold int) (diffe
 	return true, "content differs", leftHash, leftInfo.Size(), leftModTime
 }
 
-// runWorkers starts n workers that read from pairCh, compare each pair, and send to resultCh.
-func runWorkers(leftRoot, rightRoot string, n int, hashAlg string, threshold int, pairCh <-chan string, resultCh chan<- DiffResult, progress *progressCounts) {
+// RunWorkers starts n workers that read from pairCh, compare each pair, and send to resultCh.
+func RunWorkers(leftRoot, rightRoot string, n int, hashAlg string, threshold int, pairCh <-chan string, resultCh chan<- DiffResult, progress *ProgressCounts) {
 	workCh := make(chan string, n*2)
 	var wg sync.WaitGroup
 	for i := 0; i < n; i++ {
@@ -66,7 +73,7 @@ func runWorkers(leftRoot, rightRoot string, n int, hashAlg string, threshold int
 					resultCh <- DiffResult{Rel: rel, Reason: reason, Hash: hashStr, Size: size, Mtime: mtime}
 				}
 				if progress != nil {
-					atomic.AddInt32(&progress.processed, 1)
+					atomic.AddInt32(&progress.Processed, 1)
 				}
 			}
 		}()
@@ -74,9 +81,8 @@ func runWorkers(leftRoot, rightRoot string, n int, hashAlg string, threshold int
 	go func() {
 		for rel := range pairCh {
 			if progress != nil {
-				atomic.AddInt32(&progress.enqueued, 1)
-				// Record start time when first pair is enqueued (for time-remaining estimate).
-				atomic.CompareAndSwapInt64(&progress.startTimeUnixNano, 0, time.Now().UnixNano())
+				atomic.AddInt32(&progress.Enqueued, 1)
+				atomic.CompareAndSwapInt64(&progress.StartTimeUnixNano, 0, time.Now().UnixNano())
 			}
 			workCh <- rel
 		}
@@ -84,11 +90,4 @@ func runWorkers(leftRoot, rightRoot string, n int, hashAlg string, threshold int
 		wg.Wait()
 		close(resultCh)
 	}()
-}
-
-// progressCounts holds counters and start time for the progress indicator and time-remaining estimate.
-type progressCounts struct {
-	enqueued          int32
-	processed         int32
-	startTimeUnixNano int64 // set when first pair is enqueued; 0 means not yet started
 }

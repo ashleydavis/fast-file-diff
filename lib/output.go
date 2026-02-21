@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"encoding/json"
@@ -12,14 +12,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// formatTextTree writes diffs as an ASCII tree to w. Case-sensitive sort by path.
-func formatTextTree(diffs []DiffResult, w *os.File) {
+// FormatTextTree writes diffs as an ASCII tree to w. Case-sensitive sort by path.
+func FormatTextTree(diffs []DiffResult, w *os.File) {
 	if len(diffs) == 0 {
 		return
 	}
-	sort.Slice(diffs, func(i, j int) bool {
-		return diffs[i].Rel < diffs[j].Rel
-	})
+	sort.Slice(diffs, func(i, j int) bool { return diffs[i].Rel < diffs[j].Rel })
 	seenDirs := make(map[string]bool)
 	for _, diff := range diffs {
 		parts := strings.Split(filepath.ToSlash(diff.Rel), "/")
@@ -48,7 +46,8 @@ func formatTextTree(diffs []DiffResult, w *os.File) {
 	}
 }
 
-func formatTable(diffs []DiffResult, w *os.File) {
+// FormatTable writes diffs as tab-separated columns to w.
+func FormatTable(diffs []DiffResult, w *os.File) {
 	sort.Slice(diffs, func(i, j int) bool { return diffs[i].Rel < diffs[j].Rel })
 	fmt.Fprintln(w, "path\tsize\tmtime\treason\thash")
 	for _, diff := range diffs {
@@ -60,7 +59,8 @@ func formatTable(diffs []DiffResult, w *os.File) {
 	}
 }
 
-func formatJSON(diffs []DiffResult, w *os.File) {
+// FormatJSON writes diffs as JSON array to w.
+func FormatJSON(diffs []DiffResult, w *os.File) {
 	sort.Slice(diffs, func(i, j int) bool { return diffs[i].Rel < diffs[j].Rel })
 	type item struct {
 		Path   string `json:"path"`
@@ -82,7 +82,8 @@ func formatJSON(diffs []DiffResult, w *os.File) {
 	enc.Encode(items)
 }
 
-func formatYAML(diffs []DiffResult, w *os.File) {
+// FormatYAML writes diffs as YAML to w.
+func FormatYAML(diffs []DiffResult, w *os.File) {
 	sort.Slice(diffs, func(i, j int) bool { return diffs[i].Rel < diffs[j].Rel })
 	type item struct {
 		Path   string `yaml:"path"`

@@ -1,28 +1,30 @@
-package main
+package lib
 
 import (
 	"path/filepath"
 	"sync"
 )
 
-type side int
+// Side indicates which tree (left or right) a path was seen on.
+type Side int
 
 const (
-	sideLeft side = iota
-	sideRight
+	SideLeft  Side = iota
+	SideRight
 )
 
-// discoveredSet tracks which relative paths have been seen on left and right.
+// DiscoveredSet tracks which relative paths have been seen on left and right.
 // When the same path is seen on both sides, Add returns true (form a pair).
-type discoveredSet struct {
+type DiscoveredSet struct {
 	mu    sync.Mutex
-	pool  *pathPool
+	pool  *PathPool
 	left  map[string]bool
 	right map[string]bool
 }
 
-func newDiscoveredSet(pool *pathPool) *discoveredSet {
-	return &discoveredSet{
+// NewDiscoveredSet returns a new discovered set using the given path pool.
+func NewDiscoveredSet(pool *PathPool) *DiscoveredSet {
+	return &DiscoveredSet{
 		pool:  pool,
 		left:  make(map[string]bool),
 		right: make(map[string]bool),
@@ -31,12 +33,12 @@ func newDiscoveredSet(pool *pathPool) *discoveredSet {
 
 // Add records that rel was seen on the given side. It returns true when this
 // completes a pair (the other side had already been seen for rel).
-func (s *discoveredSet) Add(rel string, sd side) bool {
+func (s *DiscoveredSet) Add(rel string, sd Side) bool {
 	rel = s.pool.Intern(filepath.Clean(filepath.ToSlash(rel)))
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	switch sd {
-	case sideLeft:
+	case SideLeft:
 		if s.right[rel] {
 			firstTime := !s.left[rel]
 			s.left[rel] = true
@@ -44,7 +46,7 @@ func (s *discoveredSet) Add(rel string, sd side) bool {
 		}
 		s.left[rel] = true
 		return false
-	case sideRight:
+	case SideRight:
 		if s.left[rel] {
 			firstTime := !s.right[rel]
 			s.right[rel] = true
@@ -58,7 +60,7 @@ func (s *discoveredSet) Add(rel string, sd side) bool {
 }
 
 // LeftOnlyPaths returns relative paths that were seen on left but not on right.
-func (s *discoveredSet) LeftOnlyPaths() []string {
+func (s *DiscoveredSet) LeftOnlyPaths() []string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var out []string
@@ -71,7 +73,7 @@ func (s *discoveredSet) LeftOnlyPaths() []string {
 }
 
 // RightOnlyPaths returns relative paths that were seen on right but not on left.
-func (s *discoveredSet) RightOnlyPaths() []string {
+func (s *DiscoveredSet) RightOnlyPaths() []string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var out []string
