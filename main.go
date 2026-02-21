@@ -30,6 +30,7 @@ var dirBatchSize int
 var numWorkers int
 var hashAlg string
 var hashThreshold int
+var outputFormat string
 
 var rootCmd = &cobra.Command{
 	Use:   "ffd <left-dir> <right-dir>",
@@ -44,6 +45,7 @@ func init() {
 	rootCmd.Flags().IntVar(&numWorkers, "workers", runtime.NumCPU(), "Number of worker goroutines for comparing file pairs")
 	rootCmd.Flags().StringVar(&hashAlg, "hash", "xxhash", "Hash algorithm for content comparison: xxhash, sha256, md5")
 	rootCmd.Flags().IntVar(&hashThreshold, "threshold", 10*1024*1024, "Size threshold in bytes: files smaller are read in full to hash, larger are streamed")
+	rootCmd.Flags().StringVar(&outputFormat, "format", "text", "Output format: text, table, json, yaml")
 }
 
 func requireZeroOrTwoArgs(cmd *cobra.Command, args []string) error {
@@ -90,13 +92,14 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	for r := range resultCh {
 		diffs = append(diffs, r)
 		logger.Log("diff: " + r.Rel + " " + r.Reason)
-		if r.Hash != "" {
-			fmt.Fprintf(os.Stdout, "diff: %s (%s) %s\n", r.Rel, r.Reason, r.Hash)
-		} else {
-			fmt.Fprintf(os.Stdout, "diff: %s (%s)\n", r.Rel, r.Reason)
-		}
 	}
 	close(doneCh)
+	switch outputFormat {
+	case "text", "":
+		formatTextTree(diffs, os.Stdout)
+	default:
+		formatTextTree(diffs, os.Stdout)
+	}
 	return nil
 }
 

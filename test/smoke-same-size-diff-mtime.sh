@@ -15,7 +15,7 @@ if [[ $exitcode -ne 0 ]]; then
   echo "Expected exit 0, got $exitcode" >&2
   exit 1
 fi
-if ! echo "$out" | grep -q "diff:"; then
-  echo "Expected 'diff:' for same-size different-content, got: $out" >&2
+if ! echo "$out" | grep -q "content differs\|size changed"; then
+  echo "Expected diff reason for same-size different-content, got: $out" >&2
   exit 1
 fi

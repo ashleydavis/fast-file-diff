@@ -10,7 +10,7 @@ BIN="${SCRIPT_DIR}/bin/ffd"
 TEST_DIR="${SCRIPT_DIR}/test"
 
 # Add test names here; each should have a corresponding ./test/smoke-<name>.sh
-TESTS=(help two-empty-dirs invalid-dir identical-dirs one-diff same-size-diff-mtime hash-xxhash)
+TESTS=(help two-empty-dirs invalid-dir identical-dirs one-diff same-size-diff-mtime hash-xxhash format-text)
 
 list_tests() {
   if [[ ${#TESTS[@]} -eq 0 ]]; then

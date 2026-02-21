@@ -10,45 +10,46 @@ import (
 
 // DiffResult describes one differing file for output.
 type DiffResult struct {
-	Rel    string
-	Reason string
-	Hash   string
+	Rel      string
+	Reason   string
+	Hash     string
+	Size     int64
+	Mtime    time.Time
+	LeftOnly bool
 }
 
-// comparePair stats both files; returns (true, reason, hash) if different, (false, "", "") if same.
-// When same size but mtime differs, hashes content and reports "content differs" with hash.
-func comparePair(leftRoot, rightRoot, rel, hashAlg string, threshold int) (different bool, reason string, hashStr string) {
+// comparePair stats both files; returns (true, reason, hash, size, mtime) if different, (false, ...) if same.
+func comparePair(leftRoot, rightRoot, rel, hashAlg string, threshold int) (different bool, reason string, hashStr string, size int64, mtime time.Time) {
 	leftPath := filepath.Join(leftRoot, rel)
 	rightPath := filepath.Join(rightRoot, rel)
 	li, err := os.Stat(leftPath)
 	if err != nil {
-		return true, "stat left: " + err.Error(), ""
+		return true, "stat left: " + err.Error(), "", 0, time.Time{}
 	}
 	ri, err := os.Stat(rightPath)
 	if err != nil {
-		return true, "stat right: " + err.Error(), ""
+		return true, "stat right: " + err.Error(), "", 0, time.Time{}
 	}
 	if li.Size() != ri.Size() {
-		return true, "size changed", ""
+		return true, "size changed", "", li.Size(), li.ModTime().Truncate(time.Second)
 	}
 	lm := li.ModTime().Truncate(time.Second)
 	rm := ri.ModTime().Truncate(time.Second)
 	if lm.Equal(rm) {
-		return false, "", ""
+		return false, "", "", 0, time.Time{}
 	}
-	// Same size, different mtime: hash both
 	hL, err := hashFile(leftPath, hashAlg, threshold)
 	if err != nil {
-		return true, "hash left: " + err.Error(), ""
+		return true, "hash left: " + err.Error(), "", li.Size(), lm
 	}
 	hR, err := hashFile(rightPath, hashAlg, threshold)
 	if err != nil {
-		return true, "hash right: " + err.Error(), ""
+		return true, "hash right: " + err.Error(), "", li.Size(), lm
 	}
 	if hL == hR {
-		return false, "", ""
+		return false, "", "", 0, time.Time{}
 	}
-	return true, "content differs", hL
+	return true, "content differs", hL, li.Size(), lm
 }
 
 // runWorkers starts n workers that read from pairCh, compare each pair, and send to resultCh.
@@ -60,9 +61,9 @@ func runWorkers(leftRoot, rightRoot string, n int, hashAlg string, threshold int
 		go func() {
 			defer wg.Done()
 			for rel := range workCh {
-				diff, reason, hashStr := comparePair(leftRoot, rightRoot, rel, hashAlg, threshold)
+				diff, reason, hashStr, size, mtime := comparePair(leftRoot, rightRoot, rel, hashAlg, threshold)
 				if diff {
-					resultCh <- DiffResult{Rel: rel, Reason: reason, Hash: hashStr}
+					resultCh <- DiffResult{Rel: rel, Reason: reason, Hash: hashStr, Size: size, Mtime: mtime}
 				}
 				if progress != nil {
 					atomic.AddInt32(&progress.processed, 1)

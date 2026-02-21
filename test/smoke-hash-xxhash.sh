@@ -6,7 +6,7 @@ BIN="${SCRIPT_DIR}/../bin/ffd"
 # Same content: identical-left/right already exist
 LEFT="${SCRIPT_DIR}/identical-left"
 RIGHT="${SCRIPT_DIR}/identical-right"
-out=$("$BIN" --hash xxhash "$LEFT" "$RIGHT" 2>/dev/null)
+out=$("$BIN" --hash xxhash --format text "$LEFT" "$RIGHT" 2>/dev/null)
 if [[ -n "$out" ]]; then
   echo "Expected no output for identical dirs with --hash xxhash, got: $out" >&2
   exit 1
@@ -18,8 +18,8 @@ sleep 1
 echo -n "bb" > "${SCRIPT_DIR}/hash-right/f"
 LEFT="${SCRIPT_DIR}/hash-left"
 RIGHT="${SCRIPT_DIR}/hash-right"
-out=$("$BIN" --hash xxhash "$LEFT" "$RIGHT" 2>/dev/null)
-if ! echo "$out" | grep -q "diff:"; then
+out=$("$BIN" --hash xxhash --format text "$LEFT" "$RIGHT" 2>/dev/null)
+if ! echo "$out" | grep -q "content differs"; then
   echo "Expected diff with --hash xxhash for different content" >&2
   exit 1
 fi
