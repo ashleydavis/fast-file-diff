@@ -217,7 +217,7 @@ func discoveryProgressLoop(set *lib.DiscoveredSet, doneCh <-chan struct{}, numWo
 			n := set.PairsCount()
 			windowed := workerUtilization.Tick()
 			total := workerUtilization.UtilizedPercentWholeRun()
-			workStats := fmt.Sprintf(" [3s: %d%%, total: %d%%]", windowed, total)
+			workStats := fmt.Sprintf(" [worker utilization 3s: %d%%, total: %d%%]", windowed, total)
 			fmt.Fprintf(os.Stderr, "\rscanning: %d file pairs found (%d workers)%s   ", n, numWorkers, workStats)
 		}
 	}
@@ -258,7 +258,7 @@ func progressLoop(progressCounts *lib.ProgressCounts, doneCh <-chan struct{}, nu
 			}
 			windowed := workerUtilization.Tick()
 			total := workerUtilization.UtilizedPercentWholeRun()
-			workStats := fmt.Sprintf(" [3s: %d%%, total: %d%%]", windowed, total)
+			workStats := fmt.Sprintf(" [worker utilization 3s: %d%%, total: %d%%]", windowed, total)
 			if totalPairs > 0 {
 				pending := totalPairs - processedCount
 				if pending < 0 {
