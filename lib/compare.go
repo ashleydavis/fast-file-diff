@@ -17,18 +17,6 @@ type DiffResult struct {
 	LeftOnly bool
 }
 
-// ProgressCounts holds counters and start time for the progress indicator.
-// Exported fields so main can use atomic load for progress display.
-// TotalPairs is the total number of pairs to compare (set before starting workers); 0 means unknown.
-// If WorkerProcessed is non-nil and len(WorkerProcessed) >= numWorkers, each worker atomically increments WorkerProcessed[workerIdx] so you can see per-worker utilization (e.g. min/max in summary).
-type ProgressCounts struct {
-	Enqueued          int32
-	Processed         int32
-	StartTimeUnixNano int64
-	TotalPairs        int32
-	WorkerProcessed   []int32 // optional: per-worker compare count, one per worker
-}
-
 // comparePair hashes both files and compares hashes. Caller must have already checked size and mtime
 // (same size, different mtime); only such pairs should be sent to workers.
 func comparePair(leftRoot, rightRoot, relativePath string, hashAlg string, threshold int) (different bool, reason string, hashStr string) {
@@ -49,8 +37,9 @@ func comparePair(leftRoot, rightRoot, relativePath string, hashAlg string, thres
 }
 
 // RunWorkers starts numWorkers workers that read from pairCh, compare each pair, and send to resultCh.
-// progress and workerUtilization must be non-nil; workers update progress and call workerUtilization.Poke(workerIdx) after each pair.
+// progress and workerUtilization must be non-nil; workers record completions via a ProgressRecorder after each pair.
 func RunWorkers(leftRoot, rightRoot string, numWorkers int, hashAlg string, threshold int, pairCh <-chan PairJob, resultCh chan<- DiffResult, progress *ProgressCounts, workerUtilization *WorkerUtilization) {
+	rec := NewProgressRecorder(progress, workerUtilization)
 	workCh := make(chan PairJob, numWorkers*2)
 	var wg sync.WaitGroup
 	for workerIdx := 0; workerIdx < numWorkers; workerIdx++ {
@@ -63,11 +52,7 @@ func RunWorkers(leftRoot, rightRoot string, numWorkers int, hashAlg string, thre
 				if diff {
 					resultCh <- DiffResult{Rel: job.Rel, Reason: reason, Hash: hashStr, Size: job.Cached.LeftSize, Mtime: job.Cached.LeftMtime}
 				}
-				atomic.AddInt32(&progress.Processed, 1)
-				if idx < len(progress.WorkerProcessed) {
-					atomic.AddInt32(&progress.WorkerProcessed[idx], 1)
-				}
-				workerUtilization.Poke(idx)
+				rec.RecordCompletion(idx)
 			}
 		}()
 	}
