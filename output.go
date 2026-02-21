@@ -44,3 +44,15 @@ func formatTextTree(diffs []DiffResult, w *os.File) {
 		fmt.Fprintln(w, line)
 	}
 }
+
+func formatTable(diffs []DiffResult, w *os.File) {
+	sort.Slice(diffs, func(i, j int) bool { return diffs[i].Rel < diffs[j].Rel })
+	fmt.Fprintln(w, "path\tsize\tmtime\treason\thash")
+	for _, d := range diffs {
+		mt := ""
+		if !d.Mtime.IsZero() {
+			mt = d.Mtime.Format(time.RFC3339)
+		}
+		fmt.Fprintf(w, "%s\t%d\t%s\t%s\t%s\n", d.Rel, d.Size, mt, d.Reason, d.Hash)
+	}
+}
