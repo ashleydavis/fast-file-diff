@@ -89,7 +89,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	walkDoneCh := make(chan struct{})
 	go lib.WalkBothTrees(left, right, dirBatchSize, numWorkers, logger, set, walkDoneCh)
 	if !quiet && lib.IsTTY(os.Stderr) {
-		go discoveryProgressLoop(set, walkDoneCh)
+		go discoveryProgressLoop(set, walkDoneCh, numWorkers)
 	}
 	<-walkDoneCh
 
@@ -113,7 +113,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 
 	compareDoneCh := make(chan struct{})
 	if !quiet && lib.IsTTY(os.Stderr) {
-		go progressLoop(progressCounts, compareDoneCh)
+		go progressLoop(progressCounts, compareDoneCh, numWorkers)
 	}
 	var diffs []lib.DiffResult
 	for diffResult := range resultCh {
@@ -152,7 +152,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func discoveryProgressLoop(set *lib.DiscoveredSet, doneCh <-chan struct{}) {
+func discoveryProgressLoop(set *lib.DiscoveredSet, doneCh <-chan struct{}, numWorkers int) {
 	tick := time.NewTicker(100 * time.Millisecond)
 	defer tick.Stop()
 	for {
@@ -161,7 +161,7 @@ func discoveryProgressLoop(set *lib.DiscoveredSet, doneCh <-chan struct{}) {
 			return
 		case <-tick.C:
 			n := set.PairsCount()
-			fmt.Fprintf(os.Stderr, "\rscanning: %d file pairs found   ", n)
+			fmt.Fprintf(os.Stderr, "\rscanning: %d file pairs found (%d workers)   ", n, numWorkers)
 		}
 	}
 }
@@ -182,7 +182,7 @@ func estimateRemainingDuration(processed, pending int32, startTimeUnixNano int64
 	return estimateRemainingFromElapsed(elapsed, processed, pending)
 }
 
-func progressLoop(progressCounts *lib.ProgressCounts, doneCh <-chan struct{}) {
+func progressLoop(progressCounts *lib.ProgressCounts, doneCh <-chan struct{}, numWorkers int) {
 	tick := time.NewTicker(100 * time.Millisecond)
 	defer tick.Stop()
 	for {
@@ -203,13 +203,13 @@ func progressLoop(progressCounts *lib.ProgressCounts, doneCh <-chan struct{}) {
 				}
 				remaining := estimateRemainingDuration(processedCount, pending, startTimeNano)
 				if remaining > 0 {
-					fmt.Fprintf(os.Stderr, "\rcomparing: %d of %d, ~%s remaining   ", processedCount, totalPairs, remaining.Round(time.Second))
+					fmt.Fprintf(os.Stderr, "\rcomparing: %d of %d, ~%s remaining (%d workers)   ", processedCount, totalPairs, remaining.Round(time.Second), numWorkers)
 				} else {
-					fmt.Fprintf(os.Stderr, "\rcomparing: %d of %d   ", processedCount, totalPairs)
+					fmt.Fprintf(os.Stderr, "\rcomparing: %d of %d (%d workers)   ", processedCount, totalPairs, numWorkers)
 				}
 			} else {
 				enqueuedCount := atomic.LoadInt32(&progressCounts.Enqueued)
-				fmt.Fprintf(os.Stderr, "\rprocessed %d, enqueued %d   ", processedCount, enqueuedCount)
+				fmt.Fprintf(os.Stderr, "\rprocessed %d, enqueued %d (%d workers)   ", processedCount, enqueuedCount, numWorkers)
 			}
 		}
 	}

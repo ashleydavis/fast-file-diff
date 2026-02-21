@@ -355,3 +355,13 @@ Test data lives under `test/` (e.g. `five-same-left`, `five-same-right`, `five-o
 **Why:** The previous walk used only two goroutines (one per tree); a shared queue and multiple workers allow more concurrent directory reads and can speed up discovery on large trees.
 
 **What it accomplishes:** Discovery phase uses numWorkers concurrent directory scanners; build and all unit and smoke tests pass.
+
+---
+
+## Show worker count in progress messages
+
+**What was done:** discoveryProgressLoop and progressLoop now take numWorkers and include it in the stderr progress lines: scanning phase shows "scanning: N file pairs found (M workers)"; compare phase shows "comparing: N of Total, ~Xs remaining (M workers)" or "comparing: N of Total (M workers)" or "processed N, enqueued E (M workers)" as appropriate.
+
+**Why:** Users can see how many workers are active in each phase.
+
+**What it accomplishes:** Progress output reports worker count for both discovery and compare phases.
