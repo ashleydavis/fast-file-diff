@@ -27,7 +27,7 @@ This document lists commits in order. Each commit is a single, buildable change 
 
 **Smoke tests as you go:** Write smoke tests as you go where possible. For each commit that introduces behavior testable via the CLI (`bin/ffd`), add a smoke test in that commit. Introduce or extend the smoke test harness when needed so new tests can run. The "Before each commit" check runs smoke tests once the harness exists (from Commit 1 onward).
 
-- **Next:** Commit 7
+- **Next:** Commit 8
 
 ---
 
@@ -85,7 +85,7 @@ This document lists commits in order. Each commit is a single, buildable change 
 - Portable implementation (no Linux-specific batch yet).
 - Unit tests with small test trees.
 
-## - [ ] Commit 6: Walk both trees in parallel and feed queue
+## - [x] Commit 6: Walk both trees in parallel and feed queue
 
 **Message:** Walk both trees in parallel and feed queue
 
@@ -95,7 +95,7 @@ This document lists commits in order. Each commit is a single, buildable change 
 - Log every directory and file discovered (both trees).
 - Add smoke test: two identical empty dirs → no diff output (or empty diff).
 
-## - [ ] Commit 7: Linux batched directory read (optional)
+## - [x] Commit 7: Linux batched directory read (optional)
 
 **Message:** Linux batched directory read (optional)
 

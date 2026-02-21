@@ -38,7 +38,12 @@ This document is updated after each commit: what was done, how it went, and any 
 - **How it went:** Build, tests, smoke passed.
 - **Problems:** None.
 
-*(Continue for Commits 7–19; add entries as you complete each commit.)*
+### Commit 7: Linux batched directory read (optional)
+- **What I did:** Added --dir-batch-size flag (default 4096); walkTreeWithBatch with build-tagged walk_linux.go (Readdir(n) batched walk) and walk_nonlinux.go (portable); walkBothTrees passes batch size.
+- **How it went:** Build, tests, smoke passed on Linux.
+- **Problems:** None.
+
+*(Continue for Commits 8–19; add entries as you complete each commit.)*
 
 ---
 
