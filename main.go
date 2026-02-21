@@ -31,6 +31,7 @@ var numWorkers int
 var hashAlg string
 var hashThreshold int
 var outputFormat string
+var quiet bool
 
 var rootCmd = &cobra.Command{
 	Use:   "ffd <left-dir> <right-dir>",
@@ -46,6 +47,7 @@ func init() {
 	rootCmd.Flags().StringVar(&hashAlg, "hash", "xxhash", "Hash algorithm for content comparison: xxhash, sha256, md5")
 	rootCmd.Flags().IntVar(&hashThreshold, "threshold", 10*1024*1024, "Size threshold in bytes: files smaller are read in full to hash, larger are streamed")
 	rootCmd.Flags().StringVar(&outputFormat, "format", "text", "Output format: text, table, json, yaml")
+	rootCmd.Flags().BoolVar(&quiet, "quiet", false, "Suppress progress and final error-log message (for scripting)")
 }
 
 func requireZeroOrTwoArgs(cmd *cobra.Command, args []string) error {
@@ -75,7 +77,9 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		os.Exit(ExitFatal)
 	}
 	defer logger.Close()
-	defer logger.PrintLogPaths()
+	if !quiet {
+		defer logger.PrintLogPaths()
+	}
 	logger.Log("started comparison")
 	pool := newPathPool()
 	set := newDiscoveredSet(pool)
@@ -85,7 +89,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	go walkBothTrees(left, right, dirBatchSize, logger, set, pairCh)
 	runWorkers(left, right, numWorkers, hashAlg, hashThreshold, pairCh, resultCh, progress)
 	doneCh := make(chan struct{})
-	if isTTY(os.Stderr) {
+	if !quiet && isTTY(os.Stderr) {
 		go progressLoop(progress, doneCh)
 	}
 	var diffs []DiffResult
@@ -103,6 +107,12 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		formatYAML(diffs, os.Stdout)
 	default:
 		formatTextTree(diffs, os.Stdout)
+	}
+	if logger.NonFatalCount() > 0 {
+		if !quiet {
+			fmt.Fprintln(os.Stderr, "Errors occurred; check the error log for details.")
+		}
+		os.Exit(ExitNonFatal)
 	}
 	return nil
 }

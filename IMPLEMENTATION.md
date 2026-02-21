@@ -151,7 +151,7 @@ This document lists commits in order. Each commit is a single, buildable change 
 - Wire `--format text` (or default).
 - Add smoke test: run with default or `--format text`; diff output is tree-shaped and includes path/size/reason.
 
-## - [ ] Commit 12: Output format: table
+## - [x] Commit 12: Output format: table
 
 **Message:** Output format: table
 
@@ -161,7 +161,7 @@ This document lists commits in order. Each commit is a single, buildable change 
 - Wire `--format table`.
 - Add smoke test: run with `--format table`; output is tabular (e.g. columns), no tree.
 
-## - [ ] Commit 13: Output format: JSON
+## - [x] Commit 13: Output format: JSON
 
 **Message:** Output format: JSON
 
@@ -171,7 +171,7 @@ This document lists commits in order. Each commit is a single, buildable change 
 - Wire `--format json`.
 - Add smoke test: run with `--format json`; stdout is valid JSON (e.g. parseable).
 
-## - [ ] Commit 14: Output format: YAML
+## - [x] Commit 14: Output format: YAML
 
 **Message:** Output format: YAML
 
