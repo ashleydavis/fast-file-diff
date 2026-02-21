@@ -12,6 +12,11 @@ TEST_DIR="${SCRIPT_DIR}/test"
 # Add test names here; each should have a corresponding ./test/smoke-<name>.sh
 TESTS=(help two-empty-dirs invalid-dir identical-dirs one-diff same-size-diff-mtime hash-xxhash format-text format-table format-json format-yaml quiet left-only right-only)
 
+build_first() {
+  cd "$SCRIPT_DIR"
+  ./build.sh
+}
+
 list_tests() {
   if [[ ${#TESTS[@]} -eq 0 ]]; then
     echo "No smoke tests defined. Add names to the TESTS array in smoke-tests.sh and create ./test/smoke-<name>.sh for each."
@@ -29,10 +34,7 @@ run_one() {
     echo "Unknown or missing test: $name (expected $script)" >&2
     return 1
   fi
-  if [[ ! -x "$BIN" ]]; then
-    echo "Binary not found or not executable: $BIN (run ./build.sh first)" >&2
-    return 1
-  fi
+  build_first
   "$script"
 }
 
@@ -42,6 +44,7 @@ run_all() {
     echo "No smoke tests defined."
     return 0
   fi
+  build_first
   for t in "${TESTS[@]}"; do
     echo "=== smoke: $t ==="
     if run_one "$t"; then
