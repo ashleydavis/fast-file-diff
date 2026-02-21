@@ -23,12 +23,18 @@ func main() {
 	}
 }
 
+var dirBatchSize int
+
 var rootCmd = &cobra.Command{
 	Use:   "ffd <left-dir> <right-dir>",
 	Short: "Fast file diff between two directory trees",
 	Long:  "Compare two directory trees recursively. Left dir and right dir are required positional arguments.",
 	Args:  cobra.MatchAll(cobra.ArbitraryArgs, requireZeroOrTwoArgs),
 	RunE:  runRoot,
+}
+
+func init() {
+	rootCmd.Flags().IntVar(&dirBatchSize, "dir-batch-size", 4096, "On Linux: batch size for directory reads (entries per syscall)")
 }
 
 func requireZeroOrTwoArgs(cmd *cobra.Command, args []string) error {
@@ -63,7 +69,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	pool := newPathPool()
 	set := newDiscoveredSet(pool)
 	pairCh := make(chan string, pairQueueCap)
-	go walkBothTrees(left, right, logger, set, pairCh)
+	go walkBothTrees(left, right, dirBatchSize, logger, set, pairCh)
 	for rel := range pairCh {
 		logger.Log("pair: " + rel)
 	}

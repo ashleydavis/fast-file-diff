@@ -6,9 +6,8 @@ import (
 	"sync"
 )
 
-// walkTree walks root recursively and calls fn for each directory and regular file
-// (relative path, isDir). Includes hidden/dotfiles. Regular files only for files.
-func walkTree(root string, fn func(rel string, isDir bool)) {
+// walkTreePortable walks root recursively using filepath.WalkDir (portable).
+func walkTreePortable(root string, fn func(rel string, isDir bool)) {
 	filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -39,14 +38,19 @@ func walkTree(root string, fn func(rel string, isDir bool)) {
 	})
 }
 
+// walkTree is the portable entry point (used by tests); production uses walkTreeWithBatch.
+func walkTree(root string, fn func(rel string, isDir bool)) {
+	walkTreePortable(root, fn)
+}
+
 // walkBothTrees walks left and right in parallel, logs every dir/file to logger,
 // feeds the discovered set and sends pair relative paths to pairCh when both sides have the file.
-// Closes pairCh when both walks are done.
-func walkBothTrees(leftRoot, rightRoot string, log *Logger, set *discoveredSet, pairCh chan<- string) {
+// Closes pairCh when both walks are done. dirBatchSize is used on Linux for batched reads; 0 means default.
+func walkBothTrees(leftRoot, rightRoot string, dirBatchSize int, log *Logger, set *discoveredSet, pairCh chan<- string) {
 	var wg sync.WaitGroup
 	walkOne := func(root string, sd side) {
 		defer wg.Done()
-		walkTree(root, func(rel string, isDir bool) {
+		walkTreeWithBatch(root, dirBatchSize, func(rel string, isDir bool) {
 			if isDir {
 				log.Log("dir: " + rel)
 			} else {
