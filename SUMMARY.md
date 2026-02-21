@@ -315,3 +315,13 @@ Test data lives under `test/` (e.g. `five-same-left`, `five-same-right`, `five-o
 **Why:** Commit 4 was intended to make all variable and function names long and descriptive; several identifiers (including idiomatic short names and test locals) were left unchanged. This pass fixes those omissions.
 
 **What it accomplishes:** Every variable and function name in the project is now long and descriptive; build and all unit and smoke tests pass.
+
+---
+
+## Rename sort indices in output.go to descriptive names
+
+**What was done:** In lib/output.go, renamed the sort.Slice callback parameters from `idx` and `jdx` to `firstDiffIndex` and `secondDiffIndex` in all four format functions (FormatTextTree, FormatTable, FormatJSON, FormatYAML). The new names state what the indices refer to (positions in the diffs slice).
+
+**Why:** Variable names should describe what they represent; `idx` and `jdx` do not indicate which slice or comparison they index.
+
+**What it accomplishes:** Sort comparison parameters are self-explanatory; build and tests pass.

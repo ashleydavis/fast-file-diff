@@ -17,7 +17,7 @@ func FormatTextTree(diffs []DiffResult, w *os.File) {
 	if len(diffs) == 0 {
 		return
 	}
-	sort.Slice(diffs, func(idx, jdx int) bool { return diffs[idx].Rel < diffs[jdx].Rel })
+	sort.Slice(diffs, func(firstDiffIndex, secondDiffIndex int) bool { return diffs[firstDiffIndex].Rel < diffs[secondDiffIndex].Rel })
 	seenDirs := make(map[string]bool)
 	for _, diff := range diffs {
 		parts := strings.Split(filepath.ToSlash(diff.Rel), "/")
@@ -48,7 +48,7 @@ func FormatTextTree(diffs []DiffResult, w *os.File) {
 
 // FormatTable writes diffs as tab-separated columns to w.
 func FormatTable(diffs []DiffResult, w *os.File) {
-	sort.Slice(diffs, func(idx, jdx int) bool { return diffs[idx].Rel < diffs[jdx].Rel })
+	sort.Slice(diffs, func(firstDiffIndex, secondDiffIndex int) bool { return diffs[firstDiffIndex].Rel < diffs[secondDiffIndex].Rel })
 	fmt.Fprintln(w, "path\tsize\tmtime\treason\thash")
 	for _, diff := range diffs {
 		mtimeStr := ""
@@ -61,7 +61,7 @@ func FormatTable(diffs []DiffResult, w *os.File) {
 
 // FormatJSON writes diffs as JSON array to w.
 func FormatJSON(diffs []DiffResult, w *os.File) {
-	sort.Slice(diffs, func(idx, jdx int) bool { return diffs[idx].Rel < diffs[jdx].Rel })
+	sort.Slice(diffs, func(firstDiffIndex, secondDiffIndex int) bool { return diffs[firstDiffIndex].Rel < diffs[secondDiffIndex].Rel })
 	type item struct {
 		Path   string `json:"path"`
 		Size   int64  `json:"size"`
@@ -84,7 +84,7 @@ func FormatJSON(diffs []DiffResult, w *os.File) {
 
 // FormatYAML writes diffs as YAML to w.
 func FormatYAML(diffs []DiffResult, w *os.File) {
-	sort.Slice(diffs, func(idx, jdx int) bool { return diffs[idx].Rel < diffs[jdx].Rel })
+	sort.Slice(diffs, func(firstDiffIndex, secondDiffIndex int) bool { return diffs[firstDiffIndex].Rel < diffs[secondDiffIndex].Rel })
 	type item struct {
 		Path   string `yaml:"path"`
 		Size   int64  `yaml:"size"`
