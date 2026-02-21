@@ -295,3 +295,13 @@ Test data lives under `test/` (e.g. `five-same-left`, `five-same-right`, `five-o
 **Why:** The follow-up plan required a short quick start so new users can run a diff in under a minute.
 
 **What it accomplishes:** New users see build and example commands at a glance; the full CLI section remains the single place for detailed usage.
+
+---
+
+## FOLLOWUP Commit 9: Final verification — build, tests, and README
+
+**What was done:** Ran `./build.sh` and `./check.sh`; both passed. Reviewed README for completeness. Added a "For developers" section: how to run tests (`./test.sh`, `go test ./...`), full gate (`./check.sh`), code layout (root = main.go only, lib/ = library), and pointers to SPEC, IMPLEMENTATION, FOLLOWUP, SUMMARY. Added `check.sh` to the Scripts table.
+
+**Why:** The follow-up plan required final verification that the code compiles, all tests pass, and the README is complete for users and developers.
+
+**What it accomplishes:** Build and all unit and smoke tests pass; README is complete for users (quick start, CLI, scripts) and developers (tests, layout, docs). The follow-up plan is complete.

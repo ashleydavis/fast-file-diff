@@ -21,9 +21,9 @@ This document lists follow-up commits in order. Each commit is a single, buildab
 
 **Progress:** Mark the current commit below (e.g. set "Next: Commit N") and check off commits as you complete them (`[x]`).
 
-- **Next:** Commit 9 (final verification)
+- **Next:** (none; plan complete)
 
-**Final step:** Commit 9 verifies build, all tests, and README completeness before closing the plan.
+**Final step:** Commit 9 verified build, all tests, and README completeness; the plan is complete.
 
 ---
 
@@ -130,7 +130,7 @@ This document lists follow-up commits in order. Each commit is a single, buildab
 
 ---
 
-## - [ ] Commit 9: Final verification — build, tests, and README
+## - [x] Commit 9: Final verification — build, tests, and README
 
 **Message:** Final verification: build, all tests pass, README complete for users and developers
 

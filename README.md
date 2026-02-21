@@ -20,6 +20,7 @@ Run `./bin/ffd --help` for options (formats, hash algorithm, workers). See [Usin
 | `run.sh` | Run the program (`go run .`) |
 | `build.sh` | Build optimized binary to `bin/ffd` |
 | `test.sh` | Run unit tests (`go test .`) |
+| `check.sh` | Build, run all unit tests, then all smoke tests (full gate) |
 | `smoke-tests.sh` | Run all smoke tests |
 | `smoke-tests.sh <test-name>` | Run one smoke test |
 | `smoke-tests.sh ls` | List tests that can be run individually |
@@ -59,6 +60,12 @@ Create smoke tests implemented as shell scripts that run against the compiled ex
 ## Performance tests
 
 Performance tests are in their own script (e.g. `./perf-test.sh`) and may take a long time. They must run against an optimized build: build with `go build -ldflags="-s -w" -o bin/ffd .` (do not use `-race` or `-gcflags="-N -l"`). The script generates temporary test trees under `./test/perf/tmp/`, runs scenarios (all same, left-only, right-only) at 0, 1, 10, 100, 1K, 10K, and 100K files, and writes timing output. Results are appended to `./perf/perf-results.csv` (each row: date_iso, scenario, file_count, avg_sec_per_pair). See [SPEC.md](SPEC.md) for full details.
+
+## For developers
+
+- **Tests:** Run unit tests with `./test.sh` or `go test ./...`. Run the full gate (build + unit + smoke) with `./check.sh`.
+- **Code layout:** The project root contains only `main.go` (CLI entrypoint); all library code lives under `lib/`.
+- **Docs:** [SPEC.md](SPEC.md) (behavior and scripts), [IMPLEMENTATION.md](IMPLEMENTATION.md), [FOLLOWUP.md](FOLLOWUP.md), [SUMMARY.md](SUMMARY.md).
 
 ## Adding modules
 
