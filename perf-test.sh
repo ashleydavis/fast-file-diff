@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 # Performance tests for ffd. Builds optimized binary, generates test data, runs scenarios, appends to perf-results.csv.
+# Usage: ./perf-test.sh (run from project root)
 set -e
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
-BIN="${SCRIPT_DIR}/bin/ffd"
-PERF_DIR="${SCRIPT_DIR}/test/perf"
-CSV="${SCRIPT_DIR}/perf-results.csv"
+BIN="./bin/ffd"
+PERF_DIR="./test/perf"
+CSV="./perf-results.csv"
 FILE_COUNTS=(0 1 10 100 1000 10000 100000)
 
 mkdir -p "$PERF_DIR"

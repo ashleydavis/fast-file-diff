@@ -5,15 +5,10 @@
 #   <name>   = run that one test (script must exist at ./test/smoke-<name>.sh)
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BIN="${SCRIPT_DIR}/bin/ffd"
-TEST_DIR="${SCRIPT_DIR}/test"
-
 # Add test names here; each should have a corresponding ./test/smoke-<name>.sh
 TESTS=(help two-empty-dirs invalid-dir identical-dirs one-diff same-size-diff-mtime hash-xxhash format-text format-table format-json format-yaml quiet left-only right-only)
 
 build_first() {
-  cd "$SCRIPT_DIR"
   ./build.sh
 }
 
@@ -29,7 +24,7 @@ list_tests() {
 
 run_one() {
   local name="$1"
-  local script="${TEST_DIR}/smoke-${name}.sh"
+  local script="./test/smoke-${name}.sh"
   if [[ ! -f "$script" ]]; then
     echo "Unknown or missing test: $name (expected $script)" >&2
     return 1
