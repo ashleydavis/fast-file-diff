@@ -27,7 +27,7 @@ This document lists commits in order. Each commit is a single, buildable change 
 
 **Smoke tests as you go:** Write smoke tests as you go where possible. For each commit that introduces behavior testable via the CLI (`bin/ffd`), add a smoke test in that commit. Introduce or extend the smoke test harness when needed so new tests can run. The "Before each commit" check runs smoke tests once the harness exists (from Commit 1 onward).
 
-- **Next:** Commit 2
+- **Next:** Commit 3
 
 ---
 
@@ -43,7 +43,7 @@ This document lists commits in order. Each commit is a single, buildable change 
 - Define exit code constants: 0 success, 1 usage, 2 fatal, 3 non-fatal errors occurred.
 - Add minimal smoke test harness (e.g. `smoke-tests.sh` that runs a list of tests) and one smoke test: no args → help (exit 0, help text on stdout).
 
-## - [ ] Commit 2: Add logging layer (Logger)
+## - [x] Commit 2: Add logging layer (Logger)
 
 **Message:** Add logging layer (Logger)
 
