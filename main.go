@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime"
+	"sync/atomic"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -24,6 +27,7 @@ func main() {
 }
 
 var dirBatchSize int
+var numWorkers int
 
 var rootCmd = &cobra.Command{
 	Use:   "ffd <left-dir> <right-dir>",
@@ -35,6 +39,7 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.Flags().IntVar(&dirBatchSize, "dir-batch-size", 4096, "On Linux: batch size for directory reads (entries per syscall)")
+	rootCmd.Flags().IntVar(&numWorkers, "workers", runtime.NumCPU(), "Number of worker goroutines for comparing file pairs")
 }
 
 func requireZeroOrTwoArgs(cmd *cobra.Command, args []string) error {
@@ -69,12 +74,41 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	pool := newPathPool()
 	set := newDiscoveredSet(pool)
 	pairCh := make(chan string, pairQueueCap)
+	resultCh := make(chan DiffResult, 256)
+	progress := &progressCounts{}
 	go walkBothTrees(left, right, dirBatchSize, logger, set, pairCh)
-	for rel := range pairCh {
-		logger.Log("pair: " + rel)
+	runWorkers(left, right, numWorkers, pairCh, resultCh, progress)
+	doneCh := make(chan struct{})
+	if isTTY(os.Stderr) {
+		go progressLoop(progress, doneCh)
 	}
-	// No comparison yet; pairs are discovered and logged only.
+	var diffs []DiffResult
+	for r := range resultCh {
+		diffs = append(diffs, r)
+		logger.Log("diff: " + r.Rel + " " + r.Reason)
+		fmt.Fprintf(os.Stdout, "diff: %s (%s)\n", r.Rel, r.Reason)
+	}
+	close(doneCh)
 	return nil
+}
+
+func progressLoop(p *progressCounts, doneCh <-chan struct{}) {
+	tick := time.NewTicker(100 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		select {
+		case <-doneCh:
+			return
+		case <-tick.C:
+			proc := atomic.LoadInt32(&p.processed)
+			enq := atomic.LoadInt32(&p.enqueued)
+			pending := enq - proc
+			if enq == 0 && proc == 0 {
+				continue
+			}
+			fmt.Fprintf(os.Stderr, "\rprocessed %d, pending %d   ", proc, pending)
+		}
+	}
 }
 
 // ensureDir returns nil if path is an existing directory; otherwise an error.
