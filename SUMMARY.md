@@ -48,7 +48,12 @@ This document is updated after each commit: what was done, how it went, and any 
 - **How it went:** Build, tests, smoke passed.
 - **Problems:** None.
 
-*(Continue for Commits 9–19; add entries as you complete each commit.)*
+### Commit 9: Size and mtime comparison
+- **What I did:** comparePair already did size+mtime; added unit test same size/different mtime; smoke same-size-diff-mtime (mtime differs → diff reported).
+- **How it went:** All tests and smoke passed.
+- **Problems:** None.
+
+*(Continue for Commits 10–19; add entries as you complete each commit.)*
 
 ---
 

@@ -27,7 +27,7 @@ This document lists commits in order. Each commit is a single, buildable change 
 
 **Smoke tests as you go:** Write smoke tests as you go where possible. For each commit that introduces behavior testable via the CLI (`bin/ffd`), add a smoke test in that commit. Introduce or extend the smoke test harness when needed so new tests can run. The "Before each commit" check runs smoke tests once the harness exists (from Commit 1 onward).
 
-- **Next:** Commit 9
+- **Next:** Commit 10
 
 ---
 
@@ -115,7 +115,7 @@ This document lists commits in order. Each commit is a single, buildable change 
 - Progress: processed vs pending on stderr when stderr is a TTY.
 - Add smoke test: two identical dirs (same files) → no differences reported; two dirs with one file different → difference reported.
 
-## - [ ] Commit 9: Size and mtime comparison
+## - [x] Commit 9: Size and mtime comparison
 
 **Message:** Size and mtime comparison
 
