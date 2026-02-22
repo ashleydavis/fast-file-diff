@@ -301,7 +301,7 @@ func discoveryProgressLoop(set *lib.DiscoveredSet, doneCh <-chan struct{}, numWo
 			windowed := workerUtilization.Tick()
 			total := workerUtilization.UtilizedPercentWholeRun()
 			workStats := fmt.Sprintf(" [worker utilization 3s: %d%%, total: %d%%]", windowed, total)
-			fmt.Fprintf(os.Stderr, "\rScanning: %d left-only, %d right-only, %d pairs (%d workers)%s   ", leftOnly, rightOnly, pairs, numWorkers, workStats)
+			writeProgressLine("Scanning: %d left-only, %d right-only, %d pairs (%d workers)%s   ", leftOnly, rightOnly, pairs, numWorkers, workStats)
 		}
 	}
 }
@@ -322,6 +322,11 @@ func estimateRemainingDuration(processed, pending int32, startTimeUnixNano int64
 	}
 	elapsed := time.Since(time.Unix(0, startTimeUnixNano))
 	return estimateRemainingFromElapsed(elapsed, processed, pending)
+}
+
+// writeProgressLine overwrites the current stderr line with the formatted message, clearing to end of line first so no leftover text remains.
+func writeProgressLine(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, "\r\033[K"+format, args...)
 }
 
 // Prints "comparing: N of M, ~Xs remaining" to stderr until doneCh closes. If workerUtilization is non-nil, appends the percentage of workers utilized in the last second (from workerUtilization.Tick()).
@@ -349,13 +354,13 @@ func progressLoop(progressCounts *lib.ProgressCounts, doneCh <-chan struct{}, nu
 				}
 				remaining := estimateRemainingDuration(processedCount, pending, startTimeNano)
 				if remaining > 0 {
-					fmt.Fprintf(os.Stderr, "\rComparing: %d of %d, ~%s remaining (%d workers)%s   ", processedCount, totalPairs, remaining.Round(time.Second), numWorkers, workStats)
+					writeProgressLine("Comparing: %d of %d, ~%s remaining (%d workers)%s   ", processedCount, totalPairs, remaining.Round(time.Second), numWorkers, workStats)
 				} else {
-					fmt.Fprintf(os.Stderr, "\rComparing: %d of %d (%d workers)%s   ", processedCount, totalPairs, numWorkers, workStats)
+					writeProgressLine("Comparing: %d of %d (%d workers)%s   ", processedCount, totalPairs, numWorkers, workStats)
 				}
 			} else {
 				enqueuedCount := atomic.LoadInt32(&progressCounts.Enqueued)
-				fmt.Fprintf(os.Stderr, "\rProcessed %d, enqueued %d (%d workers)%s   ", processedCount, enqueuedCount, numWorkers, workStats)
+				writeProgressLine("Processed %d, enqueued %d (%d workers)%s   ", processedCount, enqueuedCount, numWorkers, workStats)
 			}
 		}
 	}
