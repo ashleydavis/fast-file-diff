@@ -122,8 +122,8 @@ func WalkBothTrees(leftRoot, rightRoot string, dirBatchSize int, numWalkWorkers 
 	close(doneCh)
 }
 
-// Walks root with filepath.WalkDir, calls fn for each file and dir with relative path and metadata; skips symlinks and non-regular files. Used on non-Linux and as fallback so behavior is consistent everywhere.
-func walkTreePortable(root string, fn WalkFileFunc) {
+// Walks root with filepath.WalkDir, calls walkFileFunc for each file and dir with relative path and metadata; skips symlinks and non-regular files. Used on non-Linux and as fallback so behavior is consistent everywhere.
+func walkTreePortable(root string, walkFileFunc WalkFileFunc) {
 	filepath.WalkDir(root, func(path string, dirEntry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -136,7 +136,7 @@ func walkTreePortable(root string, fn WalkFileFunc) {
 			return nil
 		}
 		if dirEntry.IsDir() {
-			fn(rel, true, 0, time.Time{})
+			walkFileFunc(rel, true, 0, time.Time{})
 			return nil
 		}
 		if dirEntry.Type() == fs.ModeSymlink {
@@ -149,12 +149,12 @@ func walkTreePortable(root string, fn WalkFileFunc) {
 		if !info.Mode().IsRegular() {
 			return nil
 		}
-		fn(rel, false, info.Size(), info.ModTime())
+		walkFileFunc(rel, false, info.Size(), info.ModTime())
 		return nil
 	})
 }
 
 // Default entry for a single-tree walk. On Linux uses walkTreeWithBatch for batched Readdir; otherwise walkTreePortable.
-func walkTree(root string, fn WalkFileFunc) {
-	walkTreeWithBatch(root, 0, fn)
+func walkTree(root string, walkFileFunc WalkFileFunc) {
+	walkTreeWithBatch(root, 0, walkFileFunc)
 }

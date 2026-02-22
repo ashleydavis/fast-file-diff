@@ -12,15 +12,15 @@ import (
 const defaultDirBatchSize = 4096
 
 // Entry point for Linux: uses batched Readdir for better performance on large directories; ignores batchSize on non-Linux (see walk_nonlinux.go).
-func walkTreeWithBatch(root string, batchSize int, fn WalkFileFunc) {
+func walkTreeWithBatch(root string, batchSize int, walkFileFunc WalkFileFunc) {
 	if batchSize <= 0 {
 		batchSize = defaultDirBatchSize
 	}
-	walkTreeBatched(root, "", root, batchSize, fn)
+	walkTreeBatched(root, "", root, batchSize, walkFileFunc)
 }
 
-// Recursively lists absRoot in batches via Readdir(batchSize), builds relative paths from relDir, and invokes fn for each file/dir; skips symlinks and non-regular files like the portable path.
-func walkTreeBatched(absRoot, relDir, root string, batchSize int, fn WalkFileFunc) {
+// Recursively lists absRoot in batches via Readdir(batchSize), builds relative paths from relDir, and invokes walkFileFunc for each file/dir; skips symlinks and non-regular files like the portable path.
+func walkTreeBatched(absRoot, relDir, root string, batchSize int, walkFileFunc WalkFileFunc) {
 	dirFile, err := os.Open(absRoot)
 	if err != nil {
 		return
@@ -44,16 +44,16 @@ func walkTreeBatched(absRoot, relDir, root string, batchSize int, fn WalkFileFun
 				relPath = filepath.Join(relDir, name)
 			}
 			if entry.IsDir() {
-				fn(relPath, true, 0, time.Time{})
+				walkFileFunc(relPath, true, 0, time.Time{})
 				subAbs := filepath.Join(absRoot, name)
-				walkTreeBatched(subAbs, relPath, root, batchSize, fn)
+				walkTreeBatched(subAbs, relPath, root, batchSize, walkFileFunc)
 				continue
 			}
 			if entry.Mode()&os.ModeSymlink != 0 {
 				continue
 			}
 			if entry.Mode().IsRegular() {
-				fn(relPath, false, entry.Size(), entry.ModTime())
+				walkFileFunc(relPath, false, entry.Size(), entry.ModTime())
 			}
 		}
 	}
