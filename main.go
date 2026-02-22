@@ -219,11 +219,11 @@ func discoveryProgressLoop(set *lib.DiscoveredSet, doneCh <-chan struct{}, numWo
 		case <-doneCh:
 			return
 		case <-tick.C:
-			n := set.PairsCount()
+			n := set.TotalFilesCount()
 			windowed := workerUtilization.Tick()
 			total := workerUtilization.UtilizedPercentWholeRun()
 			workStats := fmt.Sprintf(" [worker utilization 3s: %d%%, total: %d%%]", windowed, total)
-			fmt.Fprintf(os.Stderr, "\rScanning: %d file pairs found (%d workers)%s   ", n, numWorkers, workStats)
+			fmt.Fprintf(os.Stderr, "\rScanning: %d files found (%d workers)%s   ", n, numWorkers, workStats)
 		}
 	}
 }

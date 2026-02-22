@@ -36,14 +36,17 @@ type fileInfoCache struct {
 
 // DiscoveredSet tracks which relative paths have been seen on left and right,
 // and caches size and mtime from the walk for use during compare.
+// leftOnlyCount and rightOnlyCount are maintained in Add() so counts are O(1).
 type DiscoveredSet struct {
-	mu           sync.Mutex
-	pool         *PathPool
-	left         map[string]bool
-	right        map[string]bool
-	leftFileInfo map[string]fileInfoCache
-	rightFileInfo map[string]fileInfoCache
-	pairPaths    []string
+	mu             sync.Mutex
+	pool           *PathPool
+	left           map[string]bool
+	right          map[string]bool
+	leftFileInfo   map[string]fileInfoCache
+	rightFileInfo  map[string]fileInfoCache
+	pairPaths      []string
+	leftOnlyCount  int
+	rightOnlyCount int
 }
 
 // NewDiscoveredSet returns a new discovered set using the given path pool.
@@ -72,10 +75,12 @@ func (discoveredSet *DiscoveredSet) Add(rel string, side Side, size int64, mtime
 			discoveredSet.left[rel] = true
 			if firstTime {
 				discoveredSet.pairPaths = append(discoveredSet.pairPaths, rel)
+				discoveredSet.rightOnlyCount-- // was right-only, now a pair
 			}
 			return firstTime
 		}
 		discoveredSet.left[rel] = true
+		discoveredSet.leftOnlyCount++
 		return false
 	case SideRight:
 		discoveredSet.rightFileInfo[rel] = info
@@ -84,10 +89,12 @@ func (discoveredSet *DiscoveredSet) Add(rel string, side Side, size int64, mtime
 			discoveredSet.right[rel] = true
 			if firstTime {
 				discoveredSet.pairPaths = append(discoveredSet.pairPaths, rel)
+				discoveredSet.leftOnlyCount-- // was left-only, now a pair
 			}
 			return firstTime
 		}
 		discoveredSet.right[rel] = true
+		discoveredSet.rightOnlyCount++
 		return false
 	default:
 		return false
@@ -116,6 +123,27 @@ func (discoveredSet *DiscoveredSet) PairsCount() int {
 	discoveredSet.mu.Lock()
 	defer discoveredSet.mu.Unlock()
 	return len(discoveredSet.pairPaths)
+}
+
+// LeftOnlyCount returns the number of paths seen on left but not on right. O(1).
+func (discoveredSet *DiscoveredSet) LeftOnlyCount() int {
+	discoveredSet.mu.Lock()
+	defer discoveredSet.mu.Unlock()
+	return discoveredSet.leftOnlyCount
+}
+
+// RightOnlyCount returns the number of paths seen on right but not on left. O(1).
+func (discoveredSet *DiscoveredSet) RightOnlyCount() int {
+	discoveredSet.mu.Lock()
+	defer discoveredSet.mu.Unlock()
+	return discoveredSet.rightOnlyCount
+}
+
+// TotalFilesCount returns left-only + right-only + pairs (total files across both trees). O(1).
+func (discoveredSet *DiscoveredSet) TotalFilesCount() int {
+	discoveredSet.mu.Lock()
+	defer discoveredSet.mu.Unlock()
+	return discoveredSet.leftOnlyCount + discoveredSet.rightOnlyCount + len(discoveredSet.pairPaths)
 }
 
 // PairPaths returns a copy of the relative paths that form pairs (seen on both sides), in discovery order.
