@@ -64,6 +64,29 @@ See [docs/SPEC.md](docs/SPEC.md) for full details on each script.
 
 ## Using the CLI
 
+Run `./bin/ffd --help` for full usage. Summary of commands and options:
+
+### Commands
+
+| Command | Description |
+|---------|--------------|
+| `ffd <left-dir> <right-dir>` | Compare two directory trees (default). |
+| `ffd ls <directory>` | List files recursively (one path per line). |
+| `ffd version` | Print version to stdout. Same as `--version`. |
+
+### Options (flags)
+
+These apply to the diff command; `ls` also accepts `--dir-batch-size`.
+
+| Option | Default | Description |
+|--------|---------|--------------|
+| `--dir-batch-size` | 4096 | Directory read batch size (entries per syscall). |
+| `--workers` | number of CPUs | Worker goroutines for comparing file pairs. |
+| `--hash` | xxhash | Hash for content comparison: `xxhash`, `sha256`, `md5`. |
+| `--threshold` | 10485760 (10 MiB) | Size in bytes: files smaller are read in full to hash, larger are streamed. |
+| `--format` | text | Output format: `text`, `table`, `json`, `yaml`. |
+| `--quiet` | false | Suppress progress, left/right directory lines, summary on stderr, and final error-log message (for scripting). |
+
 ### Diff (default)
 
 ```bash
@@ -71,8 +94,7 @@ See [docs/SPEC.md](docs/SPEC.md) for full details on each script.
 ```
 
 - **Arguments:** two directory paths (e.g. `./bin/ffd /path/to/a /path/to/b`).
-- **Options:** include output format (`--format`), hash algorithm (`--hash`, default xxhash; multiple options available), and others (see `./bin/ffd --help`). Run with no arguments or `--help` to see full usage and the list of hash algorithms.
-- **Output:** list of files that are "different" between the two trees. Exit code 0 when run completes; non-zero on usage or I/O errors. See [docs/SPEC.md](docs/SPEC.md) for how the diff works.
+- **Output:** list of files that are "different" between the two trees. At start (unless `--quiet`) the left and right directories are printed to stderr; at the end a summary is printed to stderr including those paths again, plus counts and timings. Exit code 0 when run completes; non-zero on usage or I/O errors. See [docs/SPEC.md](docs/SPEC.md) for how the diff works.
 
 ### ls — list files recursively
 
