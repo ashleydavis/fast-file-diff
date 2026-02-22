@@ -189,7 +189,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "  Comparing:              %s\n", compareDuration.Round(time.Millisecond))
 		fmt.Fprintf(os.Stderr, "  Total time:             %s\n", elapsed.Round(time.Millisecond))
 		fmt.Fprintf(os.Stderr, "  Average per comparison: %s\n", avgPerComparison.Round(time.Microsecond))
-		fmt.Fprintf(os.Stderr, "  Workers utilized (did ≥1 compare): %d%%\n", compareWorkerUtilization.UtilizedPercentWholeRun())
+		fmt.Fprintf(os.Stderr, "  Workers utilized:       %d%%\n", compareWorkerUtilization.UtilizedPercentWholeRun())
 	}
 	switch outputFormat {
 	case "table":
