@@ -75,6 +75,9 @@ func main() {
 	}
 }
 
+// Version is set at build time via -ldflags "-X main.Version=..."; empty means "dev".
+var Version string
+
 // Hold flag values so runRoot can read them without passing through cobra.
 var dirBatchSize int
 var numWorkers int
@@ -94,6 +97,11 @@ var rootCmd = &cobra.Command{
 
 // Binds flags to the package-level vars; defaults match the spec (e.g. xxhash, 10MiB threshold).
 func init() {
+	if Version == "" {
+		Version = "dev"
+	}
+	rootCmd.Version = Version
+	rootCmd.SetVersionTemplate("{{.Version}}\n")
 	rootCmd.Flags().IntVar(&dirBatchSize, "dir-batch-size", 4096, "Batch size for directory reads (entries per syscall)")
 	rootCmd.Flags().IntVar(&numWorkers, "workers", runtime.NumCPU(), "Number of worker goroutines for comparing file pairs")
 	rootCmd.Flags().StringVar(&hashAlg, "hash", "xxhash", "Hash algorithm for content comparison: xxhash, sha256, md5")
@@ -101,6 +109,7 @@ func init() {
 	rootCmd.Flags().StringVar(&outputFormat, "format", "text", "Output format: text, table, json, yaml")
 	rootCmd.Flags().BoolVar(&quiet, "quiet", false, "Suppress progress and final error-log message (for scripting)")
 	rootCmd.AddCommand(lsCmd)
+	rootCmd.AddCommand(versionCmd)
 }
 
 // lsCmd lists all files under a directory recursively (one relative path per line). Uses the same walk code as the diff.
@@ -110,6 +119,21 @@ var lsCmd = &cobra.Command{
 	Long:  "Walk the given directory and print the relative path of every file (one per line). Uses the same walk implementation as the diff.",
 	Args:  cobra.ExactArgs(1),
 	RunE:  runLs,
+}
+
+// versionCmd prints the version number to stdout and exits (script-friendly).
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Print the version number",
+	Long:  "Print the version number of this build to stdout. Use --version for the same from the root command.",
+	Args:  cobra.NoArgs,
+	RunE:  runVersion,
+}
+
+// runVersion writes the version string to stdout; used by the version command.
+func runVersion(cmd *cobra.Command, args []string) error {
+	fmt.Println(Version)
+	return nil
 }
 
 // Enforces 0 args (for --help) or 2 args (left and right dir); used as cobra's Args so users get a clear error.

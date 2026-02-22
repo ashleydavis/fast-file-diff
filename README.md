@@ -84,6 +84,15 @@ See [docs/SPEC.md](docs/SPEC.md) for full details on each script.
 - **Output:** one path per line; progress and summary (file count, duration) to stderr. Uses batched directory reads; batch size is configurable with `--dir-batch-size` (default 4096).
 - **Example:** `./bin/ffd ls /media/backup/photos` or `./bin/ffd --dir-batch-size 8192 ls /media/backup/photos`.
 
+### version — print version number
+
+```bash
+./bin/ffd version
+./bin/ffd --version
+```
+
+- **Output:** version string to stdout (e.g. `dev` for local builds, or the release tag such as `v1.0.0` when built with `-ldflags "-X main.Version=..."`). Exit 0. Script-friendly.
+
 Implementation must follow [docs/SPEC.md](docs/SPEC.md). Keep this README updated with the actual functionality of the CLI (arguments, options, output formats, and usage). Create unit tests for every function that is created.
 
 ## Smoke tests

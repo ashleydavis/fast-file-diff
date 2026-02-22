@@ -55,7 +55,7 @@ jobs:
         with:
           go-version: '1.21'
       - name: Build
-        run: GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -ldflags="-s -w" -o ${{ matrix.out }} .
+        run: GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -ldflags="-s -w -X main.Version=${{ github.ref_name }}" -o ${{ matrix.out }} .
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
