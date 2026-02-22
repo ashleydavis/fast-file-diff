@@ -154,7 +154,7 @@ func walkTreePortable(root string, fn WalkFileFunc) {
 	})
 }
 
-// Default entry for a single-tree walk; delegates to walkTreePortable (Linux may use walkTreeWithBatch instead for batched reads).
+// Default entry for a single-tree walk. On Linux uses walkTreeWithBatch for batched Readdir; otherwise walkTreePortable.
 func walkTree(root string, fn WalkFileFunc) {
-	walkTreePortable(root, fn)
+	walkTreeWithBatch(root, 0, fn)
 }
