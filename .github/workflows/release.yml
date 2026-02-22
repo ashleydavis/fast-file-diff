@@ -68,6 +68,14 @@ jobs:
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
         run: go build -ldflags="-s -w -X main.Version=${{ github.ref_name }}" -o ${{ matrix.out }} .
+      - name: Smoke tests
+        shell: bash
+        env:
+          SKIP_BUILD: 1
+        run: |
+          mkdir -p bin
+          if [[ -f ffd.exe ]]; then cp ffd.exe bin/ffd.exe; else cp ${{ matrix.out }} bin/ffd && chmod +x bin/ffd; fi
+          ./smoke-tests.sh
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}

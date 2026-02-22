@@ -3,12 +3,15 @@
 #   no args  = run all tests
 #   ls       = list test names that can be run individually
 #   <name>   = run that one test (script must exist at ./test/smoke-<name>.sh)
+# Set SKIP_BUILD=1 to skip the build step (used by the release workflow to test the built artifact).
 set -e
 
 # Add test names here; each should have a corresponding ./test/smoke-<name>.sh
 TESTS=(help version two-empty-dirs invalid-dir usage-exit1 ls-empty ls-one-file ls-two-files ls-empty-subdir ls-file-and-subdir identical-dirs one-diff same-size-diff-mtime hash-xxhash hash-sha256 hash-md5 format-text format-table format-json format-yaml quiet left-only right-only five-same five-one-diff five-two-diff-left five-two-diff-right five-one-left-only five-one-right-only)
 
 build_first() {
+  # Optional: disabled when SKIP_BUILD=1 (release workflow tests the artifact it built).
+  [[ -n "$SKIP_BUILD" ]] && return 0
   ./build.sh
 }
 
