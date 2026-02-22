@@ -19,6 +19,55 @@ const (
 	ExitNonFatal = 3
 )
 
+// runSummary holds the counts and timings needed to display the run summary.
+type runSummary struct {
+	totalCompared            int
+	leftOnlyCount            int
+	rightOnlyCount           int
+	differentCount           int
+	sameCount                int
+	startTime                time.Time
+	scanDuration             time.Duration
+	compareDuration          time.Duration
+	workerUtilizationPercent int
+}
+
+// displaySummary writes the run summary to the logger (always) and to stderr when printToStderr is true.
+func displaySummary(logger *lib.Logger, printToStderr bool, s runSummary) {
+	elapsed := time.Since(s.startTime)
+	avgPerComparison := time.Duration(0)
+	if s.totalCompared > 0 {
+		avgPerComparison = elapsed / time.Duration(s.totalCompared)
+	}
+	lines := []string{
+		"",
+		"Summary:",
+		fmt.Sprintf("  Total files compared:   %d", s.totalCompared),
+		fmt.Sprintf("  Files only on left:     %d", s.leftOnlyCount),
+		fmt.Sprintf("  Files only on right:    %d", s.rightOnlyCount),
+		fmt.Sprintf("  Files different:        %d", s.differentCount),
+		fmt.Sprintf("  Files same:             %d", s.sameCount),
+		fmt.Sprintf("  Scanning:               %s", s.scanDuration.Round(time.Millisecond)),
+		fmt.Sprintf("  Comparing:              %s", s.compareDuration.Round(time.Millisecond)),
+		fmt.Sprintf("  Total time:             %s", elapsed.Round(time.Millisecond)),
+		fmt.Sprintf("  Average per comparison: %s", avgPerComparison.Round(time.Microsecond)),
+		fmt.Sprintf("  Workers utilized:       %d%%", s.workerUtilizationPercent),
+	}
+	for _, line := range lines {
+		if line == "" {
+			logger.Log("")
+			if printToStderr {
+				fmt.Fprintln(os.Stderr)
+			}
+		} else {
+			logger.Log(line)
+			if printToStderr {
+				fmt.Fprintln(os.Stderr, line)
+			}
+		}
+	}
+}
+
 // Runs the CLI; on any error exits with ExitUsage so scripts get a consistent exit code.
 func main() {
 	if err := rootCmd.Execute(); err != nil {
@@ -197,25 +246,17 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	for _, relativePath := range rightOnlyPaths {
 		logger.Log("  " + relativePath)
 	}
-	if !quiet {
-		elapsed := time.Since(startTime)
-		avgPerComparison := time.Duration(0)
-		if totalCompared > 0 {
-			avgPerComparison = elapsed / time.Duration(totalCompared)
-		}
-		fmt.Fprintln(os.Stderr, "")
-		fmt.Fprintf(os.Stderr, "Summary:\n")
-		fmt.Fprintf(os.Stderr, "  Total files compared:   %d\n", totalCompared)
-		fmt.Fprintf(os.Stderr, "  Files only on left:     %d\n", leftOnlyCount)
-		fmt.Fprintf(os.Stderr, "  Files only on right:    %d\n", rightOnlyCount)
-		fmt.Fprintf(os.Stderr, "  Files different:        %d\n", differentCount)
-		fmt.Fprintf(os.Stderr, "  Files same:             %d\n", sameCount)
-		fmt.Fprintf(os.Stderr, "  Scanning:               %s\n", scanDuration.Round(time.Millisecond))
-		fmt.Fprintf(os.Stderr, "  Comparing:              %s\n", compareDuration.Round(time.Millisecond))
-		fmt.Fprintf(os.Stderr, "  Total time:             %s\n", elapsed.Round(time.Millisecond))
-		fmt.Fprintf(os.Stderr, "  Average per comparison: %s\n", avgPerComparison.Round(time.Microsecond))
-		fmt.Fprintf(os.Stderr, "  Workers utilized:       %d%%\n", compareWorkerUtilization.UtilizedPercentWholeRun())
-	}
+	displaySummary(logger, !quiet, runSummary{
+		totalCompared:            totalCompared,
+		leftOnlyCount:            leftOnlyCount,
+		rightOnlyCount:           rightOnlyCount,
+		differentCount:           differentCount,
+		sameCount:                sameCount,
+		startTime:                startTime,
+		scanDuration:             scanDuration,
+		compareDuration:          compareDuration,
+		workerUtilizationPercent: compareWorkerUtilization.UtilizedPercentWholeRun(),
+	})
 	switch outputFormat {
 	case "table":
 		lib.FormatTable(diffs, os.Stdout)
