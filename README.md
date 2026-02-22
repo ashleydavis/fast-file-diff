@@ -39,6 +39,8 @@ See [docs/SPEC.md](docs/SPEC.md) for full details on each script.
 
 ## Using the CLI
 
+### Diff (default)
+
 ```bash
 ./bin/ffd <dir1> <dir2>
 ```
@@ -46,6 +48,16 @@ See [docs/SPEC.md](docs/SPEC.md) for full details on each script.
 - **Arguments:** two directory paths (e.g. `./bin/ffd /path/to/a /path/to/b`).
 - **Options:** include output format (`--format`), hash algorithm (`--hash`, default xxhash; multiple options available), and others (see `./bin/ffd --help`). Run with no arguments or `--help` to see full usage and the list of hash algorithms.
 - **Output:** list of files that are "different" between the two trees. Exit code 0 when run completes; non-zero on usage or I/O errors. See [docs/SPEC.md](docs/SPEC.md) for how the diff works.
+
+### ls — list files recursively
+
+```bash
+./bin/ffd ls <directory>
+```
+
+- **Arguments:** one directory path. Walks the tree and prints the relative path of every file (one per line) to stdout.
+- **Output:** one path per line; progress and summary (file count, duration) to stderr. On Linux uses batched directory reads by default; use `--no-dir-batch` to force the portable walk (filepath.WalkDir) for comparison or when batched read is slow or problematic.
+- **Example:** `./bin/ffd ls /media/backup/photos` or `./bin/ffd --no-dir-batch ls /media/backup/photos`.
 
 Implementation must follow [docs/SPEC.md](docs/SPEC.md). Keep this README updated with the actual functionality of the CLI (arguments, options, output formats, and usage). Create unit tests for every function that is created.
 

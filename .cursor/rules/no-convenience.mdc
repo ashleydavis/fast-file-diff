@@ -1,0 +1,11 @@
+---
+description: Convenience is fine; don't use it as an excuse to break patterns or skip work
+alwaysApply: true
+---
+
+# Convenience Is Not an Excuse
+
+Convenience is fine. Do **not** use it as an excuse for:
+
+- **Breaking existing patterns.** If the project has one test per file, one scenario per script, or one concern per module, match that. (e.g. five separate smoke tests when the harness is one-script-per-scenario, not one combined script.)
+- **Being lazy or avoiding the work.** Do the full work the same way similar things are done in the repo; when in doubt, look at how they're already done and do it the same way.

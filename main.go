@@ -51,6 +51,16 @@ func init() {
 	rootCmd.Flags().IntVar(&hashThreshold, "threshold", 10*1024*1024, "Size threshold in bytes: files smaller are read in full to hash, larger are streamed")
 	rootCmd.Flags().StringVar(&outputFormat, "format", "text", "Output format: text, table, json, yaml")
 	rootCmd.Flags().BoolVar(&quiet, "quiet", false, "Suppress progress and final error-log message (for scripting)")
+	rootCmd.AddCommand(lsCmd)
+}
+
+// lsCmd lists all files under a directory recursively (one relative path per line). Uses the same walk code as the diff.
+var lsCmd = &cobra.Command{
+	Use:   "ls [directory]",
+	Short: "List files in a directory recursively",
+	Long:  "Walk the given directory and print the relative path of every file (one per line). Uses the same walk implementation as the diff.",
+	Args:  cobra.ExactArgs(1),
+	RunE:  runLs,
 }
 
 // Enforces 0 args (for --help) or 2 args (left and right dir); used as cobra's Args so users get a clear error.
@@ -59,6 +69,25 @@ func requireZeroOrTwoArgs(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 	return fmt.Errorf("requires 0 or 2 arguments, got %d", len(args))
+}
+
+// runLs walks the given directory and prints each file's relative path to stdout (one per line).
+func runLs(cmd *cobra.Command, args []string) error {
+	root := args[0]
+	if err := lib.EnsureDir(root); err != nil {
+		return fmt.Errorf("not a directory: %w", err)
+	}
+	start := time.Now()
+	var count int
+	lib.WalkTree(root, func(rel string, isDir bool, _ int64, _ time.Time) {
+		if !isDir {
+			count++
+			fmt.Fprintln(cmd.OutOrStdout(), rel)
+		}
+	})
+	elapsed := time.Since(start)
+	fmt.Fprintf(cmd.ErrOrStderr(), "Listed %d files in %v\n", count, elapsed.Round(time.Millisecond))
+	return nil
 }
 
 // Validates dirs, walks both trees, compares pairs (with progress when not quiet), then writes diffs in the chosen format. Drives lib for walk, discovery, hashing, and output; progress and logging stay here so the CLI controls UX.

@@ -122,7 +122,12 @@ func WalkBothTrees(leftRoot, rightRoot string, dirBatchSize int, numWalkWorkers 
 	close(doneCh)
 }
 
-// Default entry for a single-tree walk. On Linux uses walkTreeWithBatch for batched Readdir; otherwise walkTreePortable (in walk_nonlinux.go).
+// walkTree is the default entry for a single-tree walk. On Linux uses walkTreeWithBatch for batched Readdir; otherwise walkTreePortable.
 func walkTree(root string, walkFileFunc WalkFileFunc) {
 	walkTreeWithBatch(root, 0, walkFileFunc)
+}
+
+// WalkTree traverses root recursively and calls walkFileFunc for each file and directory (relative path, isDir, and for files size/mtime). Skips symlinks and non-regular files. Exported for testbeds and tools that need a single-tree walk.
+func WalkTree(root string, walkFileFunc WalkFileFunc) {
+	walkTree(root, walkFileFunc)
 }
