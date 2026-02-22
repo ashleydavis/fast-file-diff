@@ -121,7 +121,7 @@ func (logger *Logger) Close() error {
 	defer logger.mu.Unlock()
 	var closeError error
 	if logger.mainFile != nil {
-		if closeErr := logger.mainFile.Close(); closeErr != nil && closeError == nil {
+		if closeErr := logger.mainFile.Close(); closeErr != nil {
 			closeError = closeErr
 		}
 		logger.mainFile = nil
