@@ -17,7 +17,7 @@ type ProgressCounts struct {
 // ProgressRecorder records worker completions for the compare phase: it bumps Processed,
 // optionally WorkerProcessed[workerIdx], and pokes the utilization tracker. Safe for concurrent use.
 type ProgressRecorder struct {
-	progress   *ProgressCounts
+	progress    *ProgressCounts
 	utilization *WorkerUtilization
 }
 

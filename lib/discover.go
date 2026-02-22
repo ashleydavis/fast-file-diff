@@ -10,7 +10,7 @@ import (
 type Side int
 
 const (
-	SideLeft  Side = iota
+	SideLeft Side = iota
 	SideRight
 )
 
@@ -30,7 +30,7 @@ type PairJob struct {
 
 // Stores size and mtime for one side of a path inside DiscoveredSet; mtime is truncated to second for stable comparison.
 type fileInfoCache struct {
-	size int64
+	size  int64
 	mtime time.Time
 }
 
