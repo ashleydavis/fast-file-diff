@@ -28,38 +28,46 @@ jobs:
           ./smoke-tests.sh
 
   build:
-    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: linux
+          - runner: ubuntu-latest
+            os: linux
             arch: amd64
             out: ffd-linux-amd64
             artifact: ffd-linux-amd64
-          - os: linux
+          - runner: ubuntu-latest
+            os: linux
             arch: arm64
             out: ffd-linux-arm64
             artifact: ffd-linux-arm64
-          - os: windows
+          - runner: windows-latest
+            os: windows
             arch: amd64
             out: ffd.exe
             artifact: ffd-windows
-          - os: darwin
+          - runner: macos-15-intel
+            os: darwin
             arch: amd64
             out: ffd-darwin-amd64
             artifact: ffd-darwin-amd64
-          - os: darwin
+          - runner: macos-14
+            os: darwin
             arch: arm64
             out: ffd-darwin-arm64
             artifact: ffd-darwin-arm64
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version: '1.21'
       - name: Build
-        run: GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -ldflags="-s -w -X main.Version=${{ github.ref_name }}" -o ${{ matrix.out }} .
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+        run: go build -ldflags="-s -w -X main.Version=${{ github.ref_name }}" -o ${{ matrix.out }} .
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
