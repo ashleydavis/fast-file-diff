@@ -11,4 +11,6 @@ Good user experience is very important; design choices should favor clarity, hel
 
 Use test-driven development: create a **failing** unit test before writing each function, then write the code so the test passes. Create a unit test for every function. If you cannot create a failing test before writing a function, stop and ask for directions. Comment every function to indicate its intent.
 
+**Naming:** Use long, descriptive names for variables, functions, and struct fields. Do not use abbreviated, short, or cryptic names (e.g. single-letter names like `r` or `d`, or abbreviations like `Rel` for relative path). Prefer names like `relativePath` over `rel`, `diffResult` over `r`. This matches SPEC.md (descriptive names), FOLLOWUP.md, and IMPLEMENTATION.md Commit 4.
+
 Write smoke tests as you go: for each commit that introduces behavior testable via the CLI, add a smoke test in that commit; extend the harness when needed. Create smoke tests as shell scripts that operate on the compiled executable (`bin/ffd`), with examples under `./test`. Each smoke test must be independent (for possible parallelization). Run all with `./smoke-tests.sh`; run one with `./smoke-tests.sh <test-name>`; list tests with `./smoke-tests.sh ls`.

@@ -17,6 +17,13 @@ type DiffResult struct {
 	LeftOnly bool
 }
 
+// CompareResult is the outcome of comparing one pair: identical (Diff == nil) or different (Diff != nil).
+// Workers send one per pair to a single result channel.
+type CompareResult struct {
+	RelativePath string      // relative path
+	Diff         *DiffResult // nil if identical, non-nil if different
+}
+
 // comparePair hashes both files and compares hashes. Caller must have already checked size and mtime
 // (same size, different mtime); only such pairs should be sent to workers.
 func comparePair(leftRoot, rightRoot, relativePath string, hashAlg string, threshold int) (different bool, reason string, hashStr string) {
@@ -36,9 +43,9 @@ func comparePair(leftRoot, rightRoot, relativePath string, hashAlg string, thres
 	return true, "content differs", leftHash
 }
 
-// RunWorkers starts numWorkers workers that read from pairCh, compare each pair, send diffs to resultCh and optionally send identical rels to sameCh.
-// progress and workerUtilization must be non-nil. If sameCh is non-nil, workers send the rel path when hashes match; RunWorkers closes sameCh when done.
-func RunWorkers(leftRoot, rightRoot string, numWorkers int, hashAlg string, threshold int, pairCh <-chan PairJob, resultCh chan<- DiffResult, progress *ProgressCounts, workerUtilization *WorkerUtilization, sameCh chan<- string) {
+// RunWorkers starts numWorkers workers that read from pairCh, compare each pair, and send one CompareResult per pair to resultCh (Diff set when different, nil when identical).
+// progress and workerUtilization must be non-nil. RunWorkers closes resultCh when done.
+func RunWorkers(leftRoot, rightRoot string, numWorkers int, hashAlg string, threshold int, pairCh <-chan PairJob, resultCh chan<- CompareResult, progress *ProgressCounts, workerUtilization *WorkerUtilization) {
 	rec := NewProgressRecorder(progress, workerUtilization)
 	workCh := make(chan PairJob, numWorkers*2)
 	var wg sync.WaitGroup
@@ -50,9 +57,9 @@ func RunWorkers(leftRoot, rightRoot string, numWorkers int, hashAlg string, thre
 			for job := range workCh {
 				diff, reason, hashStr := comparePair(leftRoot, rightRoot, job.Rel, hashAlg, threshold)
 				if diff {
-					resultCh <- DiffResult{Rel: job.Rel, Reason: reason, Hash: hashStr, Size: job.Cached.LeftSize, Mtime: job.Cached.LeftMtime}
-				} else if sameCh != nil {
-					sameCh <- job.Rel
+					resultCh <- CompareResult{RelativePath: job.Rel, Diff: &DiffResult{Rel: job.Rel, Reason: reason, Hash: hashStr, Size: job.Cached.LeftSize, Mtime: job.Cached.LeftMtime}}
+				} else {
+					resultCh <- CompareResult{RelativePath: job.Rel, Diff: nil}
 				}
 				rec.RecordCompletion(idx)
 			}
@@ -67,8 +74,5 @@ func RunWorkers(leftRoot, rightRoot string, numWorkers int, hashAlg string, thre
 		close(workCh)
 		wg.Wait()
 		close(resultCh)
-		if sameCh != nil {
-			close(sameCh)
-		}
 	}()
 }

@@ -89,7 +89,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	startTime := time.Now()
 	pool := lib.NewPathPool()
 	set := lib.NewDiscoveredSet(pool)
-	resultCh := make(chan lib.DiffResult, 256)
+	compareResultCh := make(chan lib.CompareResult, 256)
 	progressCounts := &lib.ProgressCounts{}
 
 	// Phase 1: discover all file pairs by walking both trees.
@@ -134,27 +134,20 @@ func runRoot(cmd *cobra.Command, args []string) error {
 
 	compareStart := time.Now()
 	pairCh := make(chan lib.PairJob, len(pairJobs)+1)
-	sameCh := make(chan string, 256)
 	go func() {
 		for _, job := range pairJobs {
 			pairCh <- job
 		}
 		close(pairCh)
 	}()
-	go lib.RunWorkers(left, right, numWorkers, hashAlg, hashThreshold, pairCh, resultCh, progressCounts, compareWorkerUtilization, sameCh)
-	go func() {
-		for relativePath := range sameCh {
-			logger.Log("identical: " + relativePath + " (same hash)")
-		}
-	}()
+	go lib.RunWorkers(left, right, numWorkers, hashAlg, hashThreshold, pairCh, compareResultCh, progressCounts, compareWorkerUtilization)
 
 	compareDoneCh := make(chan struct{})
 	if !quiet && lib.IsTTY(os.Stderr) {
 		go progressLoop(progressCounts, compareDoneCh, numWorkers, compareWorkerUtilization)
 	}
-	for diffResult := range resultCh {
-		diffs = append(diffs, diffResult)
-		logger.Log("different: " + diffResult.Rel + " (" + diffResult.Reason + ")")
+	for result := range compareResultCh {
+		reportCompareResult(result, &diffs, logger)
 	}
 	close(compareDoneCh)
 	compareDuration := time.Since(compareStart)
@@ -225,6 +218,16 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		os.Exit(ExitNonFatal)
 	}
 	return nil
+}
+
+// reportCompareResult appends the result to diffs when different and logs either "different" or "identical" with reason to the logger.
+func reportCompareResult(result lib.CompareResult, diffs *[]lib.DiffResult, logger *lib.Logger) {
+	if result.Diff != nil {
+		*diffs = append(*diffs, *result.Diff)
+		logger.Log("different: " + result.RelativePath + " (" + result.Diff.Reason + ")")
+	} else {
+		logger.Log("identical: " + result.RelativePath + " (same hash)")
+	}
 }
 
 // Prints "scanning: N file pairs" to stderr on a ticker until doneCh closes. Appends the percentage of workers utilized in the last second (from workerUtilization.Tick()).
