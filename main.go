@@ -223,7 +223,7 @@ func discoveryProgressLoop(set *lib.DiscoveredSet, doneCh <-chan struct{}, numWo
 			windowed := workerUtilization.Tick()
 			total := workerUtilization.UtilizedPercentWholeRun()
 			workStats := fmt.Sprintf(" [worker utilization 3s: %d%%, total: %d%%]", windowed, total)
-			fmt.Fprintf(os.Stderr, "\rscanning: %d file pairs found (%d workers)%s   ", n, numWorkers, workStats)
+			fmt.Fprintf(os.Stderr, "\rScanning: %d file pairs found (%d workers)%s   ", n, numWorkers, workStats)
 		}
 	}
 }
@@ -271,13 +271,13 @@ func progressLoop(progressCounts *lib.ProgressCounts, doneCh <-chan struct{}, nu
 				}
 				remaining := estimateRemainingDuration(processedCount, pending, startTimeNano)
 				if remaining > 0 {
-					fmt.Fprintf(os.Stderr, "\rcomparing: %d of %d, ~%s remaining (%d workers)%s   ", processedCount, totalPairs, remaining.Round(time.Second), numWorkers, workStats)
+					fmt.Fprintf(os.Stderr, "\rComparing: %d of %d, ~%s remaining (%d workers)%s   ", processedCount, totalPairs, remaining.Round(time.Second), numWorkers, workStats)
 				} else {
-					fmt.Fprintf(os.Stderr, "\rcomparing: %d of %d (%d workers)%s   ", processedCount, totalPairs, numWorkers, workStats)
+					fmt.Fprintf(os.Stderr, "\rComparing: %d of %d (%d workers)%s   ", processedCount, totalPairs, numWorkers, workStats)
 				}
 			} else {
 				enqueuedCount := atomic.LoadInt32(&progressCounts.Enqueued)
-				fmt.Fprintf(os.Stderr, "\rprocessed %d, enqueued %d (%d workers)%s   ", processedCount, enqueuedCount, numWorkers, workStats)
+				fmt.Fprintf(os.Stderr, "\rProcessed %d, enqueued %d (%d workers)%s   ", processedCount, enqueuedCount, numWorkers, workStats)
 			}
 		}
 	}
