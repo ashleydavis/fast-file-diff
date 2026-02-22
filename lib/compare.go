@@ -1,46 +1,69 @@
 package lib
 
 import (
+	"os"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
-// DiffResult describes one differing file for output.
+// DiffResult describes one differing file for output. Left/Right fields hold both sides when comparing a pair.
 type DiffResult struct {
-	Rel      string
-	Reason   string
-	Hash     string
-	Size     int64
-	Mtime    time.Time
-	LeftOnly bool
+	Rel        string
+	Reason     string
+	LeftHash   string
+	RightHash  string
+	LeftSize   int64
+	RightSize  int64
+	LeftMtime  time.Time
+	RightMtime time.Time
+	LeftOnly   bool
 }
 
-// CompareResult is the outcome of comparing one pair: identical (Diff == nil) or different (Diff != nil).
+// CompareResult is the outcome of comparing one pair: identical (Diff == nil) or different (Diff != nil). When identical, Reason explains why.
 // Workers send one per pair to a single result channel.
 type CompareResult struct {
 	RelativePath string      // relative path
 	Diff         *DiffResult // nil if identical, non-nil if different
+	Reason       string      // when identical, reason (e.g. "same size and mtime", "same hash")
 }
 
-// comparePair hashes both files and compares hashes. Caller must have already checked size and mtime
-// (same size, different mtime); only such pairs should be sent to workers.
-func comparePair(leftRoot, rightRoot, relativePath string, hashAlg string, threshold int) (different bool, reason string, hashStr string) {
+// comparePair stats both files. If size differs, reports "size changed" without hashing. If size same and mtime same, reports identical without hashing. Otherwise (same size, different mtime) hashes and compares. Returns different, reason, and left/right hash, size, mtime for DiffResult.
+func comparePair(leftRoot, rightRoot, relativePath string, hashAlg string, threshold int) (different bool, reason string, leftHash, rightHash string, leftSize, rightSize int64, leftMtime, rightMtime time.Time) {
 	leftPath := filepath.Join(leftRoot, relativePath)
 	rightPath := filepath.Join(rightRoot, relativePath)
-	leftHash, err := hashFile(leftPath, hashAlg, threshold)
+	leftInfo, err := os.Stat(leftPath)
 	if err != nil {
-		return true, "hash left: " + err.Error(), ""
+		return true, "stat left: " + err.Error(), "", "", 0, 0, time.Time{}, time.Time{}
 	}
-	rightHash, err := hashFile(rightPath, hashAlg, threshold)
+	rightInfo, err := os.Stat(rightPath)
 	if err != nil {
-		return true, "hash right: " + err.Error(), ""
+		return true, "stat right: " + err.Error(), "", "", leftInfo.Size(), 0, leftInfo.ModTime().Truncate(time.Second), time.Time{}
+	}
+	if !leftInfo.Mode().IsRegular() || !rightInfo.Mode().IsRegular() {
+		return false, "", "", "", 0, 0, time.Time{}, time.Time{}
+	}
+	leftSize, leftMtime = leftInfo.Size(), leftInfo.ModTime().Truncate(time.Second)
+	rightSize, rightMtime = rightInfo.Size(), rightInfo.ModTime().Truncate(time.Second)
+	if leftSize != rightSize {
+		return true, "size changed", "", "", leftSize, rightSize, leftMtime, rightMtime
+	}
+	if leftMtime.Equal(rightMtime) {
+		return false, "same size and mtime", "", "", 0, 0, time.Time{}, time.Time{}
+	}
+	leftHash, err = hashFile(leftPath, hashAlg, threshold)
+	if err != nil {
+		return true, "hash left: " + err.Error(), "", "", leftSize, rightSize, leftMtime, rightMtime
+	}
+	rightHash, err = hashFile(rightPath, hashAlg, threshold)
+	if err != nil {
+		return true, "hash right: " + err.Error(), "", "", leftSize, rightSize, leftMtime, rightMtime
 	}
 	if leftHash == rightHash {
-		return false, "", ""
+		return false, "same hash", "", "", 0, 0, time.Time{}, time.Time{}
 	}
-	return true, "content differs", leftHash
+	return true, "content differs", leftHash, rightHash, leftSize, rightSize, leftMtime, rightMtime
 }
 
 // RunWorkers starts numWorkers workers that read from pairCh, compare each pair, and send one CompareResult per pair to resultCh (Diff set when different, nil when identical).
@@ -55,11 +78,11 @@ func RunWorkers(leftRoot, rightRoot string, numWorkers int, hashAlg string, thre
 		go func() {
 			defer wg.Done()
 			for job := range workCh {
-				diff, reason, hashStr := comparePair(leftRoot, rightRoot, job.Rel, hashAlg, threshold)
+				diff, reason, lHash, rHash, lSize, rSize, lMtime, rMtime := comparePair(leftRoot, rightRoot, job.Rel, hashAlg, threshold)
 				if diff {
-					resultCh <- CompareResult{RelativePath: job.Rel, Diff: &DiffResult{Rel: job.Rel, Reason: reason, Hash: hashStr, Size: job.Cached.LeftSize, Mtime: job.Cached.LeftMtime}}
+					resultCh <- CompareResult{RelativePath: job.Rel, Diff: &DiffResult{Rel: job.Rel, Reason: reason, LeftHash: lHash, RightHash: rHash, LeftSize: lSize, RightSize: rSize, LeftMtime: lMtime, RightMtime: rMtime}}
 				} else {
-					resultCh <- CompareResult{RelativePath: job.Rel, Diff: nil}
+					resultCh <- CompareResult{RelativePath: job.Rel, Diff: nil, Reason: reason}
 				}
 				rec.RecordCompletion(idx)
 			}

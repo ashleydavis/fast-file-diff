@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"sort"
 	"testing"
-	"time"
 )
 
 func TestWalkTree_collectsRelativePaths(t *testing.T) {
@@ -23,7 +22,7 @@ func TestWalkTree_collectsRelativePaths(t *testing.T) {
 		t.Fatal(err)
 	}
 	var dirs, files []string
-	walkTree(root, func(rel string, isDir bool, _ int64, _ time.Time) {
+	walkTree(root, func(rel string, isDir bool) {
 		if isDir {
 			dirs = append(dirs, rel)
 		} else {
@@ -59,7 +58,7 @@ func TestWalkTree_regularFilesOnly(t *testing.T) {
 		t.Skip("symlink not supported")
 	}
 	var files []string
-	walkTree(root, func(rel string, isDir bool, _ int64, _ time.Time) {
+	walkTree(root, func(rel string, isDir bool) {
 		if !isDir {
 			files = append(files, rel)
 		}

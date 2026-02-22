@@ -16,13 +16,13 @@ func TestComparePair_sameFile(t *testing.T) {
 	content := []byte("same")
 	os.WriteFile(filepath.Join(left, "f"), content, 0644)
 	os.WriteFile(filepath.Join(right, "f"), content, 0644)
-	diff, _, _ := comparePair(left, right, "f", "xxhash", 10<<20)
+	diff, _, _, _, _, _, _, _ := comparePair(left, right, "f", "xxhash", 10<<20)
 	if diff {
 		t.Error("comparePair(same file) = true; want same")
 	}
 }
 
-// Size comparison is done in main before enqueueing; comparePair only hashes and compares hashes.
+// comparePair stats both files; if size or mtime differ it may skip hash or report size changed.
 
 func TestComparePair_sameSizeDifferentMtime(t *testing.T) {
 	root := t.TempDir()
@@ -33,14 +33,14 @@ func TestComparePair_sameSizeDifferentMtime(t *testing.T) {
 	os.WriteFile(filepath.Join(left, "f"), []byte("aa"), 0644)
 	time.Sleep(1 * time.Second)
 	os.WriteFile(filepath.Join(right, "f"), []byte("bb"), 0644)
-	diff, reason, hashStr := comparePair(left, right, "f", "xxhash", 10<<20)
+	diff, reason, lHash, rHash, _, _, _, _ := comparePair(left, right, "f", "xxhash", 10<<20)
 	if !diff {
 		t.Error("comparePair = false; want different")
 	}
 	if reason != "content differs" {
 		t.Errorf("reason = %q", reason)
 	}
-	if hashStr == "" {
-		t.Error("expected hash")
+	if lHash == "" || rHash == "" {
+		t.Error("expected both hashes")
 	}
 }

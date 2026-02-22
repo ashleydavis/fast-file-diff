@@ -33,13 +33,23 @@ func FormatTextTree(diffs []DiffResult, w *os.File) {
 		}
 		indent := strings.Repeat("  ", len(parts)-1)
 		name := parts[len(parts)-1]
-		mtimeStr := ""
-		if !diff.Mtime.IsZero() {
-			mtimeStr = diff.Mtime.Format(time.RFC3339)
+		sizeStr := fmt.Sprintf("%d", diff.LeftSize)
+		if !diff.LeftOnly && (diff.RightSize != 0 || diff.LeftSize != diff.RightSize) {
+			sizeStr = fmt.Sprintf("%d/%d", diff.LeftSize, diff.RightSize)
 		}
-		line := fmt.Sprintf("%s%s  size=%d  mtime=%s  %s", indent, name, diff.Size, mtimeStr, diff.Reason)
-		if diff.Hash != "" {
-			line += "  hash=" + diff.Hash
+		mtimeStr := ""
+		if !diff.LeftMtime.IsZero() {
+			mtimeStr = diff.LeftMtime.Format(time.RFC3339)
+			if !diff.LeftOnly && !diff.RightMtime.IsZero() && diff.LeftMtime != diff.RightMtime {
+				mtimeStr += "/" + diff.RightMtime.Format(time.RFC3339)
+			}
+		}
+		line := fmt.Sprintf("%s%s  size=%s  mtime=%s  %s", indent, name, sizeStr, mtimeStr, diff.Reason)
+		if diff.LeftHash != "" || diff.RightHash != "" {
+			line += "  hash=" + diff.LeftHash
+			if diff.RightHash != "" {
+				line += "/" + diff.RightHash
+			}
 		}
 		if diff.LeftOnly {
 			line += "  (left only)"
@@ -53,13 +63,17 @@ func FormatTable(diffs []DiffResult, w *os.File) {
 	sort.Slice(diffs, func(firstDiffIndex, secondDiffIndex int) bool {
 		return diffs[firstDiffIndex].Rel < diffs[secondDiffIndex].Rel
 	})
-	fmt.Fprintln(w, "path\tsize\tmtime\treason\thash")
+	fmt.Fprintln(w, "path\tleft_size\tright_size\tleft_mtime\tright_mtime\treason\tleft_hash\tright_hash")
 	for _, diff := range diffs {
-		mtimeStr := ""
-		if !diff.Mtime.IsZero() {
-			mtimeStr = diff.Mtime.Format(time.RFC3339)
+		leftMtimeStr := ""
+		if !diff.LeftMtime.IsZero() {
+			leftMtimeStr = diff.LeftMtime.Format(time.RFC3339)
 		}
-		fmt.Fprintf(w, "%s\t%d\t%s\t%s\t%s\n", diff.Rel, diff.Size, mtimeStr, diff.Reason, diff.Hash)
+		rightMtimeStr := ""
+		if !diff.RightMtime.IsZero() {
+			rightMtimeStr = diff.RightMtime.Format(time.RFC3339)
+		}
+		fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%s\t%s\t%s\t%s\n", diff.Rel, diff.LeftSize, diff.RightSize, leftMtimeStr, rightMtimeStr, diff.Reason, diff.LeftHash, diff.RightHash)
 	}
 }
 
@@ -69,19 +83,26 @@ func FormatJSON(diffs []DiffResult, w *os.File) {
 		return diffs[firstDiffIndex].Rel < diffs[secondDiffIndex].Rel
 	})
 	type item struct {
-		Path   string `json:"path"`
-		Size   int64  `json:"size"`
-		Mtime  string `json:"mtime"`
-		Reason string `json:"reason"`
-		Hash   string `json:"hash,omitempty"`
+		Path       string `json:"path"`
+		LeftSize   int64  `json:"left_size"`
+		RightSize  int64  `json:"right_size"`
+		LeftMtime  string `json:"left_mtime"`
+		RightMtime string `json:"right_mtime"`
+		Reason     string `json:"reason"`
+		LeftHash   string `json:"left_hash,omitempty"`
+		RightHash  string `json:"right_hash,omitempty"`
 	}
 	var items []item
 	for _, diff := range diffs {
-		mtimeStr := ""
-		if !diff.Mtime.IsZero() {
-			mtimeStr = diff.Mtime.Format(time.RFC3339)
+		leftMtimeStr := ""
+		if !diff.LeftMtime.IsZero() {
+			leftMtimeStr = diff.LeftMtime.Format(time.RFC3339)
 		}
-		items = append(items, item{diff.Rel, diff.Size, mtimeStr, diff.Reason, diff.Hash})
+		rightMtimeStr := ""
+		if !diff.RightMtime.IsZero() {
+			rightMtimeStr = diff.RightMtime.Format(time.RFC3339)
+		}
+		items = append(items, item{diff.Rel, diff.LeftSize, diff.RightSize, leftMtimeStr, rightMtimeStr, diff.Reason, diff.LeftHash, diff.RightHash})
 	}
 	encoder := json.NewEncoder(w)
 	encoder.SetIndent("", "  ")
@@ -94,19 +115,26 @@ func FormatYAML(diffs []DiffResult, w *os.File) {
 		return diffs[firstDiffIndex].Rel < diffs[secondDiffIndex].Rel
 	})
 	type item struct {
-		Path   string `yaml:"path"`
-		Size   int64  `yaml:"size"`
-		Mtime  string `yaml:"mtime"`
-		Reason string `yaml:"reason"`
-		Hash   string `yaml:"hash,omitempty"`
+		Path       string `yaml:"path"`
+		LeftSize   int64  `yaml:"left_size"`
+		RightSize  int64  `yaml:"right_size"`
+		LeftMtime  string `yaml:"left_mtime"`
+		RightMtime string `yaml:"right_mtime"`
+		Reason     string `yaml:"reason"`
+		LeftHash   string `yaml:"left_hash,omitempty"`
+		RightHash  string `yaml:"right_hash,omitempty"`
 	}
 	var items []item
 	for _, diff := range diffs {
-		mtimeStr := ""
-		if !diff.Mtime.IsZero() {
-			mtimeStr = diff.Mtime.Format(time.RFC3339)
+		leftMtimeStr := ""
+		if !diff.LeftMtime.IsZero() {
+			leftMtimeStr = diff.LeftMtime.Format(time.RFC3339)
 		}
-		items = append(items, item{diff.Rel, diff.Size, mtimeStr, diff.Reason, diff.Hash})
+		rightMtimeStr := ""
+		if !diff.RightMtime.IsZero() {
+			rightMtimeStr = diff.RightMtime.Format(time.RFC3339)
+		}
+		items = append(items, item{diff.Rel, diff.LeftSize, diff.RightSize, leftMtimeStr, rightMtimeStr, diff.Reason, diff.LeftHash, diff.RightHash})
 	}
 	encoder := yaml.NewEncoder(w)
 	encoder.Encode(items)

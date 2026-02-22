@@ -10,8 +10,8 @@ import (
 
 func TestFormatTable_columnsAndRows(t *testing.T) {
 	diffs := []DiffResult{
-		{Rel: "a", Reason: "size changed", Size: 10, Mtime: time.Unix(0, 0)},
-		{Rel: "b", Reason: "left only", Size: 0, LeftOnly: true},
+		{Rel: "a", Reason: "size changed", LeftSize: 10, RightSize: 20, LeftMtime: time.Unix(0, 0), RightMtime: time.Unix(0, 0)},
+		{Rel: "b", Reason: "left only", LeftOnly: true},
 	}
 	tmp := filepath.Join(t.TempDir(), "out")
 	outFile, _ := os.Create(tmp)
@@ -31,8 +31,8 @@ func TestFormatTable_columnsAndRows(t *testing.T) {
 
 func TestFormatTextTree_sortedOutput(t *testing.T) {
 	diffs := []DiffResult{
-		{Rel: "z/file", Reason: "content differs", Size: 1},
-		{Rel: "a/file", Reason: "size changed", Size: 2},
+		{Rel: "z/file", Reason: "content differs", LeftSize: 1, RightSize: 1, LeftHash: "a", RightHash: "b"},
+		{Rel: "a/file", Reason: "size changed", LeftSize: 2, RightSize: 3},
 	}
 	tmp := filepath.Join(t.TempDir(), "out")
 	outFile, _ := os.Create(tmp)

@@ -45,7 +45,7 @@ var rootCmd = &cobra.Command{
 
 // Binds flags to the package-level vars; defaults match the spec (e.g. xxhash, 10MiB threshold).
 func init() {
-	rootCmd.Flags().IntVar(&dirBatchSize, "dir-batch-size", 4096, "On Linux: batch size for directory reads (entries per syscall)")
+	rootCmd.Flags().IntVar(&dirBatchSize, "dir-batch-size", 4096, "Batch size for directory reads (entries per syscall)")
 	rootCmd.Flags().IntVar(&numWorkers, "workers", runtime.NumCPU(), "Number of worker goroutines for comparing file pairs")
 	rootCmd.Flags().StringVar(&hashAlg, "hash", "xxhash", "Hash algorithm for content comparison: xxhash, sha256, md5")
 	rootCmd.Flags().IntVar(&hashThreshold, "threshold", 10*1024*1024, "Size threshold in bytes: files smaller are read in full to hash, larger are streamed")
@@ -79,7 +79,7 @@ func runLs(cmd *cobra.Command, args []string) error {
 	}
 	start := time.Now()
 	var count int
-	lib.WalkTree(root, func(rel string, isDir bool, _ int64, _ time.Time) {
+	lib.WalkTree(root, func(rel string, isDir bool) {
 		if !isDir {
 			count++
 			fmt.Fprintln(cmd.OutOrStdout(), rel)
@@ -135,24 +135,10 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	pairPaths := set.PairPaths()
 	totalCompared := len(pairPaths)
 
-	// Cheap comparisons (size, mtime) outside workers; only pairs that need hashing go to workers.
 	var diffs []lib.DiffResult
 	var pairJobs []lib.PairJob
 	for _, relativePath := range pairPaths {
-		cached, ok := set.PairCachedInfo(relativePath)
-		if !ok || cached == nil {
-			continue
-		}
-		if cached.LeftSize != cached.RightSize {
-			diffs = append(diffs, lib.DiffResult{Rel: relativePath, Reason: "size changed", Size: cached.LeftSize, Mtime: cached.LeftMtime})
-			logger.Log("different: " + relativePath + " (size changed)")
-			continue
-		}
-		if cached.LeftMtime.Equal(cached.RightMtime) {
-			logger.Log("identical: " + relativePath + " (same size and mtime)")
-			continue // same file, no hash needed
-		}
-		pairJobs = append(pairJobs, lib.PairJob{Rel: relativePath, Cached: cached})
+		pairJobs = append(pairJobs, lib.PairJob{Rel: relativePath})
 	}
 	progressCounts.TotalPairs = int32(len(pairJobs))
 	if len(pairJobs) > 0 {
@@ -190,7 +176,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	for _, relativePath := range leftOnlyPaths {
 		path := filepath.Join(left, relativePath)
 		if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
-			diffs = append(diffs, lib.DiffResult{Rel: relativePath, Reason: "left only", Size: info.Size(), Mtime: info.ModTime().Truncate(time.Second), LeftOnly: true})
+			diffs = append(diffs, lib.DiffResult{Rel: relativePath, Reason: "left only", LeftSize: info.Size(), LeftMtime: info.ModTime().Truncate(time.Second), LeftOnly: true})
 			leftOnlyCount++
 		}
 	}
@@ -199,7 +185,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	for _, relativePath := range rightOnlyPaths {
 		path := filepath.Join(right, relativePath)
 		if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
-			diffs = append(diffs, lib.DiffResult{Rel: relativePath, Reason: "right only", Size: info.Size(), Mtime: info.ModTime().Truncate(time.Second)})
+			diffs = append(diffs, lib.DiffResult{Rel: relativePath, Reason: "right only", RightSize: info.Size(), RightMtime: info.ModTime().Truncate(time.Second)})
 			rightOnlyCount++
 		}
 	}
@@ -255,7 +241,7 @@ func reportCompareResult(result lib.CompareResult, diffs *[]lib.DiffResult, logg
 		*diffs = append(*diffs, *result.Diff)
 		logger.Log("different: " + result.RelativePath + " (" + result.Diff.Reason + ")")
 	} else {
-		logger.Log("identical: " + result.RelativePath + " (same hash)")
+		logger.Log("identical: " + result.RelativePath + " (" + result.Reason + ")")
 	}
 }
 

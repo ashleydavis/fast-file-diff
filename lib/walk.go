@@ -5,11 +5,10 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 )
 
-// WalkFileFunc is called for each file or directory: rel path, isDir, and for files only size and mtime (dirs pass 0, zero time).
-type WalkFileFunc func(rel string, isDir bool, size int64, mtime time.Time)
+// WalkFileFunc is called for each file or directory: relative path and whether it is a directory.
+type WalkFileFunc func(rel string, isDir bool)
 
 // dirJob is a directory to scan for the worker-pool walk.
 type dirJob struct {
@@ -18,15 +17,13 @@ type dirJob struct {
 	Side   Side
 }
 
-// dirEntryInfo holds name and optional file metadata for one directory entry.
+// dirEntryInfo holds name and isDir for one directory entry (no size/mtime; compare phase stats when needed).
 type dirEntryInfo struct {
-	Name    string
-	IsDir   bool
-	Size    int64
-	ModTime time.Time
+	Name  string
+	IsDir bool
 }
 
-// listDirEntries lists one directory and returns entries (name, isDir, and for files size/mtime). Skips . and .. and symlinks.
+// listDirEntries lists one directory and returns entries (name, isDir). Skips . and .. and symlinks. Does not call Info().
 func listDirEntries(root, relDir string) ([]dirEntryInfo, error) {
 	absPath := filepath.Join(root, relDir)
 	entries, err := os.ReadDir(absPath)
@@ -46,14 +43,10 @@ func listDirEntries(root, relDir string) ([]dirEntryInfo, error) {
 		if e.Type()&fs.ModeSymlink != 0 {
 			continue
 		}
-		info, err := e.Info()
-		if err != nil {
+		if e.Type()&fs.ModeType != 0 {
 			continue
 		}
-		if !info.Mode().IsRegular() {
-			continue
-		}
-		out = append(out, dirEntryInfo{Name: name, IsDir: false, Size: info.Size(), ModTime: info.ModTime()})
+		out = append(out, dirEntryInfo{Name: name, IsDir: false})
 	}
 	return out, nil
 }
@@ -82,7 +75,7 @@ func processDirJob(job dirJob, set *DiscoveredSet, log *Logger, dirCh chan dirJo
 				processDirJob(dirJob{Root: job.Root, RelDir: relPath, Side: job.Side}, set, log, dirCh, jobWg, onDirProcessed)
 			}
 		} else {
-			set.Add(relPath, job.Side, ent.Size, ent.ModTime)
+			set.Add(relPath, job.Side)
 		}
 	}
 }
@@ -122,12 +115,64 @@ func WalkBothTrees(leftRoot, rightRoot string, dirBatchSize int, numWalkWorkers 
 	close(doneCh)
 }
 
-// walkTree is the default entry for a single-tree walk. On Linux uses walkTreeWithBatch for batched Readdir; otherwise walkTreePortable.
+// defaultDirBatchSize is used when caller passes <= 0; ReadDir(batchSize) uses fewer syscalls than reading one entry at a time.
+const defaultDirBatchSize = 4096
+
+// walkTreeWithBatch walks root using batched ReadDir(batchSize), invokes walkFileFunc for each file and directory.
+func walkTreeWithBatch(root string, batchSize int, walkFileFunc WalkFileFunc) {
+	if batchSize <= 0 {
+		batchSize = defaultDirBatchSize
+	}
+	walkTreeBatched(root, "", root, batchSize, walkFileFunc)
+}
+
+// walkTreeBatched recursively lists absRoot in batches via File.ReadDir(batchSize), builds relative paths from relDir, and invokes walkFileFunc for each file/dir; skips symlinks and non-regular files. Does not call Info(); compare phase stats when needed.
+func walkTreeBatched(absRoot, relDir, root string, batchSize int, walkFileFunc WalkFileFunc) {
+	dirFile, err := os.Open(absRoot)
+	if err != nil {
+		return
+	}
+	defer dirFile.Close()
+	for {
+		entries, err := dirFile.ReadDir(batchSize)
+		if err != nil {
+			return
+		}
+		if len(entries) == 0 {
+			break
+		}
+		for _, entry := range entries {
+			name := entry.Name()
+			if name == "." || name == ".." {
+				continue
+			}
+			relPath := name
+			if relDir != "" {
+				relPath = filepath.Join(relDir, name)
+			}
+			if entry.IsDir() {
+				walkFileFunc(relPath, true)
+				subAbs := filepath.Join(absRoot, name)
+				walkTreeBatched(subAbs, relPath, root, batchSize, walkFileFunc)
+				continue
+			}
+			if entry.Type()&fs.ModeSymlink != 0 {
+				continue
+			}
+			if entry.Type()&fs.ModeType != 0 {
+				continue
+			}
+			walkFileFunc(relPath, false)
+		}
+	}
+}
+
+// walkTree is the default entry for a single-tree walk; uses batched ReadDir via walkTreeWithBatch.
 func walkTree(root string, walkFileFunc WalkFileFunc) {
 	walkTreeWithBatch(root, 0, walkFileFunc)
 }
 
-// WalkTree traverses root recursively and calls walkFileFunc for each file and directory (relative path, isDir, and for files size/mtime). Skips symlinks and non-regular files. Exported for testbeds and tools that need a single-tree walk.
+// WalkTree traverses root recursively and calls walkFileFunc for each file and directory (relative path, isDir). Skips symlinks and non-regular files. Exported for testbeds and tools that need a single-tree walk.
 func WalkTree(root string, walkFileFunc WalkFileFunc) {
 	walkTree(root, walkFileFunc)
 }

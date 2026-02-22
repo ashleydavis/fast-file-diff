@@ -56,8 +56,8 @@ See [docs/SPEC.md](docs/SPEC.md) for full details on each script.
 ```
 
 - **Arguments:** one directory path. Walks the tree and prints the relative path of every file (one per line) to stdout.
-- **Output:** one path per line; progress and summary (file count, duration) to stderr. On Linux uses batched directory reads by default; use `--no-dir-batch` to force the portable walk (filepath.WalkDir) for comparison or when batched read is slow or problematic.
-- **Example:** `./bin/ffd ls /media/backup/photos` or `./bin/ffd --no-dir-batch ls /media/backup/photos`.
+- **Output:** one path per line; progress and summary (file count, duration) to stderr. Uses batched directory reads; batch size is configurable with `--dir-batch-size` (default 4096).
+- **Example:** `./bin/ffd ls /media/backup/photos` or `./bin/ffd --dir-batch-size 8192 ls /media/backup/photos`.
 
 Implementation must follow [docs/SPEC.md](docs/SPEC.md). Keep this README updated with the actual functionality of the CLI (arguments, options, output formats, and usage). Create unit tests for every function that is created.
 
