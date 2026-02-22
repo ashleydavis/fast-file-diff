@@ -21,6 +21,8 @@ const (
 
 // runSummary holds the counts and timings needed to display the run summary.
 type runSummary struct {
+	leftDir                  string
+	rightDir                 string
 	totalCompared            int
 	leftOnlyCount            int
 	rightOnlyCount           int
@@ -42,6 +44,8 @@ func displaySummary(logger *lib.Logger, printToStderr bool, s runSummary) {
 	lines := []string{
 		"",
 		"Summary:",
+		fmt.Sprintf("  Left directory:          %s", s.leftDir),
+		fmt.Sprintf("  Right directory:         %s", s.rightDir),
 		fmt.Sprintf("  Total files compared:   %d", s.totalCompared),
 		fmt.Sprintf("  Files only on left:     %d", s.leftOnlyCount),
 		fmt.Sprintf("  Files only on right:    %d", s.rightOnlyCount),
@@ -187,6 +191,13 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	if !quiet {
 		defer logger.PrintLogPaths()
 	}
+	// Print compared directories at start (logger always; stderr when not quiet).
+	logger.Log("left directory: " + left)
+	logger.Log("right directory: " + right)
+	if !quiet {
+		fmt.Fprintln(os.Stderr, "Left directory:  ", left)
+		fmt.Fprintln(os.Stderr, "Right directory: ", right)
+	}
 	logger.Log("started comparison")
 	startTime := time.Now()
 	pool := lib.NewPathPool()
@@ -271,6 +282,8 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		logger.Log("  " + relativePath)
 	}
 	displaySummary(logger, !quiet, runSummary{
+		leftDir:                  left,
+		rightDir:                 right,
 		totalCompared:            totalCompared,
 		leftOnlyCount:            leftOnlyCount,
 		rightOnlyCount:           rightOnlyCount,
