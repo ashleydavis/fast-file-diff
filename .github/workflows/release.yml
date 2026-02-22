@@ -37,6 +37,10 @@ jobs:
             arch: amd64
             out: ffd-linux-amd64
             artifact: ffd-linux-amd64
+          - os: linux
+            arch: arm64
+            out: ffd-linux-arm64
+            artifact: ffd-linux-arm64
           - os: windows
             arch: amd64
             out: ffd.exe
@@ -74,7 +78,7 @@ jobs:
           pattern: ffd-*
           merge-multiple: true
       - name: Checksums
-        run: sha256sum ffd-linux-amd64 ffd.exe ffd-darwin-amd64 ffd-darwin-arm64 > checksums.txt
+        run: sha256sum ffd-linux-amd64 ffd-linux-arm64 ffd.exe ffd-darwin-amd64 ffd-darwin-arm64 > checksums.txt
       - name: Write release notes
         env:
           TAG: ${{ github.ref_name }}
@@ -88,6 +92,7 @@ jobs:
           | Platform        | File                |
           |-----------------|---------------------|
           | Linux (amd64)   | ffd-linux-amd64     |
+          | Linux (arm64)   | ffd-linux-arm64     |
           | Windows (amd64) | ffd.exe             |
           | macOS (Intel)   | ffd-darwin-amd64    |
           | macOS (Apple Silicon) | ffd-darwin-arm64 |
@@ -122,5 +127,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "${{ github.ref_name }}" \
-            ffd-linux-amd64 ffd.exe ffd-darwin-amd64 ffd-darwin-arm64 checksums.txt \
+            ffd-linux-amd64 ffd-linux-arm64 ffd.exe ffd-darwin-amd64 ffd-darwin-arm64 checksums.txt \
             --clobber

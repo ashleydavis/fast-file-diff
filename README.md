@@ -13,6 +13,7 @@ Pre-built binaries are on the [Releases](https://github.com/ashleydavis/fast-fil
 | Platform        | File                |
 |-----------------|---------------------|
 | Linux (amd64)   | ffd-linux-amd64     |
+| Linux (arm64)   | ffd-linux-arm64     |
 | Windows (amd64) | ffd.exe             |
 | macOS (Intel)   | ffd-darwin-amd64    |
 | macOS (Apple Silicon) | ffd-darwin-arm64 |
