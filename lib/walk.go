@@ -74,7 +74,6 @@ func processDirJob(job dirJob, set *DiscoveredSet, log *Logger, dirCh chan dirJo
 			relPath = filepath.Join(job.RelDir, ent.Name)
 		}
 		if ent.IsDir {
-			log.Log("dir: " + relPath)
 			jobWg.Add(1)
 			select {
 			case dirCh <- dirJob{Root: job.Root, RelDir: relPath, Side: job.Side}:
@@ -83,7 +82,6 @@ func processDirJob(job dirJob, set *DiscoveredSet, log *Logger, dirCh chan dirJo
 				processDirJob(dirJob{Root: job.Root, RelDir: relPath, Side: job.Side}, set, log, dirCh, jobWg, onDirProcessed)
 			}
 		} else {
-			log.Log("file: " + relPath)
 			set.Add(relPath, job.Side, ent.Size, ent.ModTime)
 		}
 	}

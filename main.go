@@ -109,20 +109,21 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	// Cheap comparisons (size, mtime) outside workers; only pairs that need hashing go to workers.
 	var diffs []lib.DiffResult
 	var pairJobs []lib.PairJob
-	for _, rel := range pairPaths {
-		cached, ok := set.PairCachedInfo(rel)
+	for _, relativePath := range pairPaths {
+		cached, ok := set.PairCachedInfo(relativePath)
 		if !ok || cached == nil {
 			continue
 		}
 		if cached.LeftSize != cached.RightSize {
-			diffs = append(diffs, lib.DiffResult{Rel: rel, Reason: "size changed", Size: cached.LeftSize, Mtime: cached.LeftMtime})
-			logger.Log("diff: " + rel + " size changed")
+			diffs = append(diffs, lib.DiffResult{Rel: relativePath, Reason: "size changed", Size: cached.LeftSize, Mtime: cached.LeftMtime})
+			logger.Log("different: " + relativePath + " (size changed)")
 			continue
 		}
 		if cached.LeftMtime.Equal(cached.RightMtime) {
+			logger.Log("identical: " + relativePath + " (same size and mtime)")
 			continue // same file, no hash needed
 		}
-		pairJobs = append(pairJobs, lib.PairJob{Rel: rel, Cached: cached})
+		pairJobs = append(pairJobs, lib.PairJob{Rel: relativePath, Cached: cached})
 	}
 	progressCounts.TotalPairs = int32(len(pairJobs))
 	if len(pairJobs) > 0 {
@@ -133,13 +134,19 @@ func runRoot(cmd *cobra.Command, args []string) error {
 
 	compareStart := time.Now()
 	pairCh := make(chan lib.PairJob, len(pairJobs)+1)
+	sameCh := make(chan string, 256)
 	go func() {
 		for _, job := range pairJobs {
 			pairCh <- job
 		}
 		close(pairCh)
 	}()
-	go lib.RunWorkers(left, right, numWorkers, hashAlg, hashThreshold, pairCh, resultCh, progressCounts, compareWorkerUtilization)
+	go lib.RunWorkers(left, right, numWorkers, hashAlg, hashThreshold, pairCh, resultCh, progressCounts, compareWorkerUtilization, sameCh)
+	go func() {
+		for relativePath := range sameCh {
+			logger.Log("identical: " + relativePath + " (same hash)")
+		}
+	}()
 
 	compareDoneCh := make(chan struct{})
 	if !quiet && lib.IsTTY(os.Stderr) {
@@ -147,7 +154,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	}
 	for diffResult := range resultCh {
 		diffs = append(diffs, diffResult)
-		logger.Log("diff: " + diffResult.Rel + " " + diffResult.Reason)
+		logger.Log("different: " + diffResult.Rel + " (" + diffResult.Reason + ")")
 	}
 	close(compareDoneCh)
 	compareDuration := time.Since(compareStart)
@@ -156,21 +163,31 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	if sameCount < 0 {
 		sameCount = 0
 	}
+	leftOnlyPaths := set.LeftOnlyPaths()
 	leftOnlyCount := 0
-	for _, rel := range set.LeftOnlyPaths() {
-		path := filepath.Join(left, rel)
+	for _, relativePath := range leftOnlyPaths {
+		path := filepath.Join(left, relativePath)
 		if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
-			diffs = append(diffs, lib.DiffResult{Rel: rel, Reason: "left only", Size: info.Size(), Mtime: info.ModTime().Truncate(time.Second), LeftOnly: true})
+			diffs = append(diffs, lib.DiffResult{Rel: relativePath, Reason: "left only", Size: info.Size(), Mtime: info.ModTime().Truncate(time.Second), LeftOnly: true})
 			leftOnlyCount++
 		}
 	}
+	rightOnlyPaths := set.RightOnlyPaths()
 	rightOnlyCount := 0
-	for _, rel := range set.RightOnlyPaths() {
-		path := filepath.Join(right, rel)
+	for _, relativePath := range rightOnlyPaths {
+		path := filepath.Join(right, relativePath)
 		if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
-			diffs = append(diffs, lib.DiffResult{Rel: rel, Reason: "right only", Size: info.Size(), Mtime: info.ModTime().Truncate(time.Second)})
+			diffs = append(diffs, lib.DiffResult{Rel: relativePath, Reason: "right only", Size: info.Size(), Mtime: info.ModTime().Truncate(time.Second)})
 			rightOnlyCount++
 		}
+	}
+	logger.Log("left-only files: " + fmt.Sprintf("%d", len(leftOnlyPaths)))
+	for _, relativePath := range leftOnlyPaths {
+		logger.Log("  " + relativePath)
+	}
+	logger.Log("right-only files: " + fmt.Sprintf("%d", len(rightOnlyPaths)))
+	for _, relativePath := range rightOnlyPaths {
+		logger.Log("  " + relativePath)
 	}
 	if !quiet {
 		elapsed := time.Since(startTime)

@@ -36,9 +36,9 @@ func comparePair(leftRoot, rightRoot, relativePath string, hashAlg string, thres
 	return true, "content differs", leftHash
 }
 
-// RunWorkers starts numWorkers workers that read from pairCh, compare each pair, and send to resultCh.
-// progress and workerUtilization must be non-nil; workers record completions via a ProgressRecorder after each pair.
-func RunWorkers(leftRoot, rightRoot string, numWorkers int, hashAlg string, threshold int, pairCh <-chan PairJob, resultCh chan<- DiffResult, progress *ProgressCounts, workerUtilization *WorkerUtilization) {
+// RunWorkers starts numWorkers workers that read from pairCh, compare each pair, send diffs to resultCh and optionally send identical rels to sameCh.
+// progress and workerUtilization must be non-nil. If sameCh is non-nil, workers send the rel path when hashes match; RunWorkers closes sameCh when done.
+func RunWorkers(leftRoot, rightRoot string, numWorkers int, hashAlg string, threshold int, pairCh <-chan PairJob, resultCh chan<- DiffResult, progress *ProgressCounts, workerUtilization *WorkerUtilization, sameCh chan<- string) {
 	rec := NewProgressRecorder(progress, workerUtilization)
 	workCh := make(chan PairJob, numWorkers*2)
 	var wg sync.WaitGroup
@@ -51,6 +51,8 @@ func RunWorkers(leftRoot, rightRoot string, numWorkers int, hashAlg string, thre
 				diff, reason, hashStr := comparePair(leftRoot, rightRoot, job.Rel, hashAlg, threshold)
 				if diff {
 					resultCh <- DiffResult{Rel: job.Rel, Reason: reason, Hash: hashStr, Size: job.Cached.LeftSize, Mtime: job.Cached.LeftMtime}
+				} else if sameCh != nil {
+					sameCh <- job.Rel
 				}
 				rec.RecordCompletion(idx)
 			}
@@ -65,5 +67,8 @@ func RunWorkers(leftRoot, rightRoot string, numWorkers int, hashAlg string, thre
 		close(workCh)
 		wg.Wait()
 		close(resultCh)
+		if sameCh != nil {
+			close(sameCh)
+		}
 	}()
 }
