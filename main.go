@@ -230,7 +230,7 @@ func reportCompareResult(result lib.CompareResult, diffs *[]lib.DiffResult, logg
 	}
 }
 
-// Prints "scanning: N file pairs" to stderr on a ticker until doneCh closes. Appends the percentage of workers utilized in the last second (from workerUtilization.Tick()).
+// Prints "scanning: N left-only, N right-only, N pairs" to stderr on a ticker until doneCh closes. Appends the percentage of workers utilized (from workerUtilization.Tick()).
 func discoveryProgressLoop(set *lib.DiscoveredSet, doneCh <-chan struct{}, numWorkers int, workerUtilization *lib.WorkerUtilization) {
 	tick := time.NewTicker(100 * time.Millisecond)
 	defer tick.Stop()
@@ -239,11 +239,13 @@ func discoveryProgressLoop(set *lib.DiscoveredSet, doneCh <-chan struct{}, numWo
 		case <-doneCh:
 			return
 		case <-tick.C:
-			n := set.TotalFilesCount()
+			leftOnly := set.LeftOnlyCount()
+			rightOnly := set.RightOnlyCount()
+			pairs := set.PairsCount()
 			windowed := workerUtilization.Tick()
 			total := workerUtilization.UtilizedPercentWholeRun()
 			workStats := fmt.Sprintf(" [worker utilization 3s: %d%%, total: %d%%]", windowed, total)
-			fmt.Fprintf(os.Stderr, "\rScanning: %d files found (%d workers)%s   ", n, numWorkers, workStats)
+			fmt.Fprintf(os.Stderr, "\rScanning: %d left-only, %d right-only, %d pairs (%d workers)%s   ", leftOnly, rightOnly, pairs, numWorkers, workStats)
 		}
 	}
 }

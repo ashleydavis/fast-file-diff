@@ -139,13 +139,6 @@ func (discoveredSet *DiscoveredSet) RightOnlyCount() int {
 	return discoveredSet.rightOnlyCount
 }
 
-// TotalFilesCount returns left-only + right-only + pairs (total files across both trees). O(1).
-func (discoveredSet *DiscoveredSet) TotalFilesCount() int {
-	discoveredSet.mu.Lock()
-	defer discoveredSet.mu.Unlock()
-	return discoveredSet.leftOnlyCount + discoveredSet.rightOnlyCount + len(discoveredSet.pairPaths)
-}
-
 // PairPaths returns a copy of the relative paths that form pairs (seen on both sides), in discovery order.
 func (discoveredSet *DiscoveredSet) PairPaths() []string {
 	discoveredSet.mu.Lock()
