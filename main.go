@@ -44,8 +44,8 @@ func displaySummary(logger *lib.Logger, printToStderr bool, s runSummary) {
 	lines := []string{
 		"",
 		"Summary:",
-		fmt.Sprintf("  Left directory:          %s", s.leftDir),
-		fmt.Sprintf("  Right directory:         %s", s.rightDir),
+		fmt.Sprintf("  Left directory:         %s", s.leftDir),
+		fmt.Sprintf("  Right directory:        %s", s.rightDir),
 		fmt.Sprintf("  Total files compared:   %d", s.totalCompared),
 		fmt.Sprintf("  Files only on left:     %d", s.leftOnlyCount),
 		fmt.Sprintf("  Files only on right:    %d", s.rightOnlyCount),
