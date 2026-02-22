@@ -180,7 +180,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Fprintln(os.Stderr, "")
 		fmt.Fprintf(os.Stderr, "Summary:\n")
-		fmt.Fprintf(os.Stderr, "  Total files compared:    %d\n", totalCompared)
+		fmt.Fprintf(os.Stderr, "  Total files compared:   %d\n", totalCompared)
 		fmt.Fprintf(os.Stderr, "  Files only on left:     %d\n", leftOnlyCount)
 		fmt.Fprintf(os.Stderr, "  Files only on right:    %d\n", rightOnlyCount)
 		fmt.Fprintf(os.Stderr, "  Files different:        %d\n", differentCount)
