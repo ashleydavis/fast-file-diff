@@ -1,9 +1,10 @@
 name: Release
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - 'v*'
 jobs:
-  release:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,21 +26,98 @@ jobs:
           ./build.sh
           ./test.sh
           ./smoke-tests.sh
-      - name: Build Linux
-        run: GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o ffd-linux-amd64 .
-      - name: Build Windows
-        run: GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o ffd.exe .
-      - name: Build macOS
-        run: |
-          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o ffd-darwin-amd64 .
-          GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o ffd-darwin-arm64 .
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+            out: ffd-linux-amd64
+            artifact: ffd-linux-amd64
+          - os: windows
+            arch: amd64
+            out: ffd.exe
+            artifact: ffd-windows
+          - os: darwin
+            arch: amd64
+            out: ffd-darwin-amd64
+            artifact: ffd-darwin-amd64
+          - os: darwin
+            arch: arm64
+            out: ffd-darwin-arm64
+            artifact: ffd-darwin-arm64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      - name: Build
+        run: GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -ldflags="-s -w" -o ${{ matrix.out }} .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.out }}
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [validate, build]
+    steps:
+      - name: Download all binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ffd-*
+          merge-multiple: true
       - name: Checksums
+        run: sha256sum ffd-linux-amd64 ffd.exe ffd-darwin-amd64 ffd-darwin-arm64 > checksums.txt
+      - name: Write release notes
+        env:
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
         run: |
-          sha256sum ffd-linux-amd64 ffd.exe ffd-darwin-amd64 ffd-darwin-arm64 > checksums.txt
+          cat << 'RELEASENOTES' > release-notes.md
+          ## Download
+
+          Pick the artifact for your platform and unzip or use as-is:
+
+          | Platform        | File                |
+          |-----------------|---------------------|
+          | Linux (amd64)   | ffd-linux-amd64     |
+          | Windows (amd64) | ffd.exe             |
+          | macOS (Intel)   | ffd-darwin-amd64    |
+          | macOS (Apple Silicon) | ffd-darwin-arm64 |
+
+          Verify with the checksums in **checksums.txt** (SHA-256).
+
+          **Direct links** (after this release is published):  
+          https://github.com/REPO_PLACEHOLDER/releases/expanded_assets/TAG_PLACEHOLDER
+
+          ## Quick start
+
+          ```bash
+          # Make the binary executable (Linux/macOS)
+          chmod +x ffd-linux-amd64   # or ffd-darwin-amd64 / ffd-darwin-arm64
+
+          # Compare two directories
+          ./ffd-linux-amd64 /path/to/left /path/to/right
+          ```
+
+          Windows: run `ffd.exe C:\path\to\left C:\path\to\right`.
+
+          Run `./ffd-linux-amd64 --help` (or your binary) for options (formats, hash algorithm, workers).
+          RELEASENOTES
+          sed -i "s|REPO_PLACEHOLDER|$REPO|g; s|TAG_PLACEHOLDER|$TAG|g" release-notes.md
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" --notes-file release-notes.md || true
       - name: Upload release assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${{ github.event.release.tag_name }}" \
+          gh release upload "${{ github.ref_name }}" \
             ffd-linux-amd64 ffd.exe ffd-darwin-amd64 ffd-darwin-arm64 checksums.txt \
             --clobber

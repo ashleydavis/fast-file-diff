@@ -4,6 +4,31 @@ A fast CLI that reports which files differ between two directories (by path and 
 
 ## Quick start
 
+## Latest release
+
+## Quick start (latest release)
+
+Pre-built binaries are on the [Releases](https://github.com/ashleydavis/fast-file-diff/releases/latest) page. Download the file for your platform:
+
+| Platform        | File                |
+|-----------------|---------------------|
+| Linux (amd64)   | ffd-linux-amd64     |
+| Windows (amd64) | ffd.exe             |
+| macOS (Intel)   | ffd-darwin-amd64    |
+| macOS (Apple Silicon) | ffd-darwin-arm64 |
+
+Then run a diff:
+
+```bash
+# Linux/macOS: make executable, then run
+chmod +x ffd-linux-amd64
+./ffd-linux-amd64 /path/to/left /path/to/right
+```
+
+Windows: `ffd.exe C:\path\to\left C:\path\to\right`. Verify downloads with the SHA-256 checksums on the release page.
+
+## Quick start (from source)
+
 Build and run a diff in under a minute:
 
 ```bash
