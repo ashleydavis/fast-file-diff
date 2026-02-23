@@ -78,29 +78,21 @@ func (discoveredSet *DiscoveredSet) Add(rel string, side Side) bool {
 
 // PairsCount returns the number of file pairs discovered so far (both sides seen).
 func (discoveredSet *DiscoveredSet) PairsCount() int {
-	discoveredSet.mu.Lock()
-	defer discoveredSet.mu.Unlock()
 	return len(discoveredSet.pairPaths)
 }
 
 // LeftOnlyCount returns the number of paths seen on left but not on right. O(1).
 func (discoveredSet *DiscoveredSet) LeftOnlyCount() int {
-	discoveredSet.mu.Lock()
-	defer discoveredSet.mu.Unlock()
 	return discoveredSet.leftOnlyCount
 }
 
 // RightOnlyCount returns the number of paths seen on right but not on left. O(1).
 func (discoveredSet *DiscoveredSet) RightOnlyCount() int {
-	discoveredSet.mu.Lock()
-	defer discoveredSet.mu.Unlock()
 	return discoveredSet.rightOnlyCount
 }
 
 // PairPaths returns a copy of the relative paths that form pairs (seen on both sides), in discovery order.
 func (discoveredSet *DiscoveredSet) PairPaths() []string {
-	discoveredSet.mu.Lock()
-	defer discoveredSet.mu.Unlock()
 	out := make([]string, len(discoveredSet.pairPaths))
 	copy(out, discoveredSet.pairPaths)
 	return out
@@ -108,8 +100,6 @@ func (discoveredSet *DiscoveredSet) PairPaths() []string {
 
 // LeftOnlyPaths returns relative paths that were seen on left but not on right.
 func (discoveredSet *DiscoveredSet) LeftOnlyPaths() []string {
-	discoveredSet.mu.Lock()
-	defer discoveredSet.mu.Unlock()
 	var out []string
 	for rel := range discoveredSet.left {
 		if !discoveredSet.right[rel] {
@@ -121,8 +111,6 @@ func (discoveredSet *DiscoveredSet) LeftOnlyPaths() []string {
 
 // RightOnlyPaths returns relative paths that were seen on right but not on left.
 func (discoveredSet *DiscoveredSet) RightOnlyPaths() []string {
-	discoveredSet.mu.Lock()
-	defer discoveredSet.mu.Unlock()
 	var out []string
 	for rel := range discoveredSet.right {
 		if !discoveredSet.left[rel] {
