@@ -1,0 +1,2 @@
+date_iso,machine,min_sec_per_pair,max_sec_per_pair,avg_sec_per_pair,longest_test_total_sec,longest_test
+2026-02-23T15:38:33+10:00,"Linux x86_64 24cores Intel(R) Core(TM) Ultra 9 285K",0,0.027882,0.00506793,125.593,all_same_100000

@@ -2,9 +2,19 @@
 
 A fast CLI that reports which files differ between two directories (by path and content), optimized for speed on large trees.
 
-## Quick start
+## Todo
 
-## Latest release
+- Does there need to be so many locks?
+    - Like when getting the value of an integer???
+
+## Low priority
+
+- Make sure the releases page documents known vulnerabilities and the checksum.
+- To make use of the workers we should be feeding the compare pipeline as soon as pairs are found.
+- Only show #workers and worker utilization on a particular flag.
+- It would be good to have one set of worker that can handle either type of job.
+    - The priority is on directory scanning.
+    - But workers that are free can start comparing as well.
 
 ## Quick start (latest release)
 
@@ -128,7 +138,7 @@ Create smoke tests implemented as shell scripts that run against the compiled ex
 
 ## Performance tests
 
-Performance tests are in their own script (e.g. `./perf-test.sh`) and may take a long time. They must run against an optimized build: build with `go build -ldflags="-s -w" -o bin/ffd .` (do not use `-race` or `-gcflags="-N -l"`). The script generates temporary test trees under `./test/perf/tmp/`, runs scenarios (all same, left-only, right-only) at 0, 1, 10, 100, 1K, 10K, and 100K files, and writes timing output. Results are appended to `./perf/perf-results.csv` (each row: date_iso, scenario, file_count, avg_sec_per_pair). See [docs/SPEC.md](docs/SPEC.md) for full details.
+Performance tests are in their own script (e.g. `./perf-test.sh`) and may take a long time. They must run against an optimized build: build with `go build -ldflags="-s -w" -o bin/ffd .` (do not use `-race` or `-gcflags="-N -l"`). The script generates temporary test trees under `./test/perf/tmp/`, runs scenarios (all same, left-only, right-only) at 0, 1, 10, 100, 1K, 10K, and 100K files, and writes timing output. Results are appended to `./perf/perf-results.csv` (one row per run: date_iso, machine, min_sec_per_pair, max_sec_per_pair, avg_sec_per_pair, longest_test_total_sec, longest_test). The machine column records host OS, arch, core count, and CPU model; min/max/avg are across all scenario/file_count tests; longest_test_total_sec is the total time of the slowest test; longest_test is that test’s identifier (e.g. all_same_100000). See [docs/SPEC.md](docs/SPEC.md) for full details.
 
 ## For developers
 
