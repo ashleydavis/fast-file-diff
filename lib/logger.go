@@ -72,10 +72,11 @@ func (logger *Logger) run(mainFile, errorFile *os.File) {
 	for req := range logger.reqCh {
 		switch req.kind {
 		case reqLog:
-			if mainFile != nil {
-				fmt.Fprintln(mainFile, req.msg)
-				mainFile.Sync()
-			}
+			// Commented out for performance testing: avoid file write + Sync per log line.
+			// if mainFile != nil {
+			// 	fmt.Fprintln(mainFile, req.msg)
+			// 	mainFile.Sync()
+			// }
 			close(req.done)
 		case reqLogError:
 			logger.errorCount++
