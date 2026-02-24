@@ -97,9 +97,27 @@ func PhaseBuildPairs(left, right []FileInfo) BuildPairsResult {
 	}
 }
 
-// PhaseClassifyPairs classifies pairs by size/mtime into differing-by-size, content-check queue, and same. Stub returns zero value until implemented.
+// PhaseClassifyPairs classifies pairs by size/mtime into differing-by-size, content-check queue, and same.
 func PhaseClassifyPairs(pairs []*Pair) ClassifyPairsResult {
-	return ClassifyPairsResult{}
+	var differingBySize []*Pair
+	var contentCheckQueue []*Pair
+	var sameBySizeMtime []*Pair
+	for _, pair := range pairs {
+		if pair.Left.Size != pair.Right.Size {
+			differingBySize = append(differingBySize, pair)
+			continue
+		}
+		if pair.Left.Mtime.Equal(pair.Right.Mtime) {
+			sameBySizeMtime = append(sameBySizeMtime, pair)
+			continue
+		}
+		contentCheckQueue = append(contentCheckQueue, pair)
+	}
+	return ClassifyPairsResult{
+		DifferingBySize:   differingBySize,
+		ContentCheckQueue: contentCheckQueue,
+		SameBySizeMtime:   sameBySizeMtime,
+	}
 }
 
 // PhaseHashLeft hashes the left-side file for each pair in contentCheckQueue and sets Pair.Left.Hash. Stub is a no-op until implemented.

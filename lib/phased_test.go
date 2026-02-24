@@ -189,3 +189,55 @@ func TestPhaseBuildPairs_oneSideEmpty(t *testing.T) {
 		t.Errorf("Pairs = %v, want empty", got.Pairs)
 	}
 }
+
+func TestPhaseClassifyPairs_sameSizeSameMtime_toSameBySizeMtime(t *testing.T) {
+	mtime := NormalizeMtime(time.Unix(1, 0))
+	left := FileInfo{Rel: "a", Size: 10, Mtime: mtime, Hash: ""}
+	right := FileInfo{Rel: "a", Size: 10, Mtime: mtime, Hash: ""}
+	pairs := []*Pair{{Rel: "a", Left: &left, Right: &right}}
+	got := PhaseClassifyPairs(pairs)
+	if len(got.SameBySizeMtime) != 1 || len(got.DifferingBySize) != 0 || len(got.ContentCheckQueue) != 0 {
+		t.Errorf("DifferingBySize=%d ContentCheckQueue=%d SameBySizeMtime=%d, want 0,0,1", len(got.DifferingBySize), len(got.ContentCheckQueue), len(got.SameBySizeMtime))
+	}
+}
+
+func TestPhaseClassifyPairs_differentSize_toDifferingBySize(t *testing.T) {
+	mtime := NormalizeMtime(time.Unix(1, 0))
+	left := FileInfo{Rel: "a", Size: 10, Mtime: mtime, Hash: ""}
+	right := FileInfo{Rel: "a", Size: 20, Mtime: mtime, Hash: ""}
+	pairs := []*Pair{{Rel: "a", Left: &left, Right: &right}}
+	got := PhaseClassifyPairs(pairs)
+	if len(got.DifferingBySize) != 1 || len(got.ContentCheckQueue) != 0 || len(got.SameBySizeMtime) != 0 {
+		t.Errorf("DifferingBySize=%d ContentCheckQueue=%d SameBySizeMtime=%d, want 1,0,0", len(got.DifferingBySize), len(got.ContentCheckQueue), len(got.SameBySizeMtime))
+	}
+}
+
+func TestPhaseClassifyPairs_sameSizeDifferentMtime_toContentCheckQueue(t *testing.T) {
+	left := FileInfo{Rel: "a", Size: 10, Mtime: NormalizeMtime(time.Unix(1, 0)), Hash: ""}
+	right := FileInfo{Rel: "a", Size: 10, Mtime: NormalizeMtime(time.Unix(2, 0)), Hash: ""}
+	pairs := []*Pair{{Rel: "a", Left: &left, Right: &right}}
+	got := PhaseClassifyPairs(pairs)
+	if len(got.ContentCheckQueue) != 1 || len(got.DifferingBySize) != 0 || len(got.SameBySizeMtime) != 0 {
+		t.Errorf("DifferingBySize=%d ContentCheckQueue=%d SameBySizeMtime=%d, want 0,1,0", len(got.DifferingBySize), len(got.ContentCheckQueue), len(got.SameBySizeMtime))
+	}
+}
+
+func TestPhaseClassifyPairs_mix(t *testing.T) {
+	m1 := NormalizeMtime(time.Unix(1, 0))
+	m2 := NormalizeMtime(time.Unix(2, 0))
+	diffSizeL := FileInfo{Rel: "diff", Size: 1, Mtime: m1, Hash: ""}
+	diffSizeR := FileInfo{Rel: "diff", Size: 2, Mtime: m1, Hash: ""}
+	sameL := FileInfo{Rel: "same", Size: 5, Mtime: m1, Hash: ""}
+	sameR := FileInfo{Rel: "same", Size: 5, Mtime: m1, Hash: ""}
+	contentL := FileInfo{Rel: "content", Size: 5, Mtime: m1, Hash: ""}
+	contentR := FileInfo{Rel: "content", Size: 5, Mtime: m2, Hash: ""}
+	pairs := []*Pair{
+		{Rel: "diff", Left: &diffSizeL, Right: &diffSizeR},
+		{Rel: "same", Left: &sameL, Right: &sameR},
+		{Rel: "content", Left: &contentL, Right: &contentR},
+	}
+	got := PhaseClassifyPairs(pairs)
+	if len(got.DifferingBySize) != 1 || len(got.SameBySizeMtime) != 1 || len(got.ContentCheckQueue) != 1 {
+		t.Errorf("DifferingBySize=%d SameBySizeMtime=%d ContentCheckQueue=%d, want 1,1,1", len(got.DifferingBySize), len(got.SameBySizeMtime), len(got.ContentCheckQueue))
+	}
+}
