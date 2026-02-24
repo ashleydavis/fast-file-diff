@@ -8,3 +8,4 @@ date_iso,machine,workers,min_sec_per_pair,max_sec_per_pair,avg_sec_per_pair,long
 2026-02-24T14:18:36+10:00,"Linux x86_64 24cores Intel(R) Core(TM) Ultra 9 285K",24,0,0.035399,0.005584,148.342,left_only_100000
 2026-02-24T14:29:37+10:00,"Linux x86_64 24cores Intel(R) Core(TM) Ultra 9 285K",48,0,0.032133,0.00556293,152.061,all_same_100000
 2026-02-24T14:40:47+10:00,"Linux x86_64 24cores Intel(R) Core(TM) Ultra 9 285K",96,0,0.031572,0.00558257,153.988,all_same_100000
+2026-02-24T15:40:00+10:00,"Linux x86_64 24cores Intel(R) Core(TM) Ultra 9 285K",24,0,122.531,3.24713,154.232,right_only_100000

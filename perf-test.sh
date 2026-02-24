@@ -54,22 +54,38 @@ gen_files() {
 }
 
 # Runs one scenario, prints human-readable line to stderr, appends "scenario,file_count,total_sec,avg_sec_per_pair" to RESULTS_TMP.
+# all_same_metadata: same size and mtime -> content never read. all_same_content: same size/content, different mtime -> every file read.
+# all_different_size: every pair different size -> no read. all_different_mtime: same size, different mtime/content -> every file read.
 run_scenario() {
   local scenario="$1"
   local n="$2"
   local left="${PERF_TMP_DIR}/left"
   local right="${PERF_TMP_DIR}/right"
+  local i
   case "$scenario" in
-    all_same)
+    all_same_metadata)
       gen_files "$left" "$n"
-      gen_files "$right" "$n"
+      mkdir -p "$right"
+      for ((i=0; i<n; i++)); do cp -p "$left/f$i" "$right/f$i"; done
+      ;;
+    all_same_content)
+      gen_files "$left" "$n"
+      mkdir -p "$right"
+      sleep 1
       for ((i=0; i<n; i++)); do echo "content $i" > "$right/f$i"; done
       ;;
-    all_different)
+    all_different_size)
       gen_files "$left" "$n"
       rm -rf "$right"
       mkdir -p "$right"
-      for ((i=0; i<n; i++)); do echo "other $i" > "$right/f$i"; done
+      for ((i=0; i<n; i++)); do echo "other_extra_$i" > "$right/f$i"; done
+      ;;
+    all_different_mtime)
+      gen_files "$left" "$n"
+      rm -rf "$right"
+      mkdir -p "$right"
+      sleep 1
+      for ((i=0; i<n; i++)); do echo "differ  $i" > "$right/f$i"; done
       ;;
     left_only)
       gen_files "$left" "$n"
@@ -100,7 +116,7 @@ run_scenario() {
 date_iso=$(date -Iseconds)
 echo "=== Perf run $date_iso ==="
 : > "$RESULTS_TMP"
-for scenario in all_same all_different left_only right_only; do
+for scenario in all_same_metadata all_same_content all_different_size all_different_mtime left_only right_only; do
   echo "Scenario: $scenario"
   for n in "${FILE_COUNTS[@]}"; do
     run_scenario "$scenario" "$n"
