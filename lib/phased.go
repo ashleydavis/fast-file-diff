@@ -149,7 +149,55 @@ func PhaseHashRight(rightRoot string, contentCheckQueue []*Pair, hashAlg string,
 	hashContentCheckQueue(rightRoot, contentCheckQueue, hashAlg, threshold, false)
 }
 
-// PhaseCompareHashes produces DiffResults from classified pairs and left-only/right-only paths. Stub returns nil until implemented.
+// PhaseCompareHashes produces DiffResults from classified pairs and left-only/right-only paths.
 func PhaseCompareHashes(contentCheckQueue, differingBySize []*Pair, leftOnlyPaths, rightOnlyPaths []string, leftByPath, rightByPath map[string]*FileInfo) []DiffResult {
-	return nil
+	var diffs []DiffResult
+	for _, pair := range differingBySize {
+		diffs = append(diffs, DiffResult{
+			Rel:        pair.Rel,
+			Reason:     "size changed",
+			LeftHash:   pair.Left.Hash,
+			RightHash:  pair.Right.Hash,
+			LeftSize:   pair.Left.Size,
+			RightSize:  pair.Right.Size,
+			LeftMtime:  pair.Left.Mtime,
+			RightMtime: pair.Right.Mtime,
+		})
+	}
+	for _, pair := range contentCheckQueue {
+		if pair.Left.Hash != pair.Right.Hash {
+			diffs = append(diffs, DiffResult{
+				Rel:        pair.Rel,
+				Reason:     "content differs",
+				LeftHash:   pair.Left.Hash,
+				RightHash:  pair.Right.Hash,
+				LeftSize:   pair.Left.Size,
+				RightSize:  pair.Right.Size,
+				LeftMtime:  pair.Left.Mtime,
+				RightMtime: pair.Right.Mtime,
+			})
+		}
+	}
+	for _, rel := range leftOnlyPaths {
+		info := leftByPath[rel]
+		if info != nil {
+			diffs = append(diffs, DiffResult{
+				Rel:      rel,
+				Reason:   "left only",
+				LeftSize: info.Size, LeftMtime: info.Mtime,
+				LeftOnly: true,
+			})
+		}
+	}
+	for _, rel := range rightOnlyPaths {
+		info := rightByPath[rel]
+		if info != nil {
+			diffs = append(diffs, DiffResult{
+				Rel:       rel,
+				Reason:    "right only",
+				RightSize: info.Size, RightMtime: info.Mtime,
+			})
+		}
+	}
+	return diffs
 }

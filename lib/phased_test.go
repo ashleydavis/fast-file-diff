@@ -260,3 +260,53 @@ func TestPhaseHashLeft_and_PhaseHashRight_setHashes(t *testing.T) {
 		t.Errorf("same file should have same hash: %q vs %q", left.Hash, right.Hash)
 	}
 }
+
+func TestPhaseCompareHashes_contentCheckSameHash_notInResult(t *testing.T) {
+	mtime := NormalizeMtime(time.Unix(1, 0))
+	left := FileInfo{Rel: "a", Size: 5, Mtime: mtime, Hash: "abc"}
+	right := FileInfo{Rel: "a", Size: 5, Mtime: mtime, Hash: "abc"}
+	contentCheck := []*Pair{{Rel: "a", Left: &left, Right: &right}}
+	leftByPath := map[string]*FileInfo{"a": &left}
+	rightByPath := map[string]*FileInfo{"a": &right}
+	got := PhaseCompareHashes(contentCheck, nil, nil, nil, leftByPath, rightByPath)
+	for _, d := range got {
+		if d.Rel == "a" {
+			t.Errorf("same hash should not produce diff for a, got Reason=%q", d.Reason)
+		}
+	}
+}
+
+func TestPhaseCompareHashes_contentCheckDifferentHash_inResult(t *testing.T) {
+	mtime := NormalizeMtime(time.Unix(1, 0))
+	left := FileInfo{Rel: "a", Size: 5, Mtime: mtime, Hash: "left"}
+	right := FileInfo{Rel: "a", Size: 5, Mtime: mtime, Hash: "right"}
+	contentCheck := []*Pair{{Rel: "a", Left: &left, Right: &right}}
+	leftByPath := map[string]*FileInfo{"a": &left}
+	rightByPath := map[string]*FileInfo{"a": &right}
+	got := PhaseCompareHashes(contentCheck, nil, nil, nil, leftByPath, rightByPath)
+	if len(got) != 1 || got[0].Rel != "a" || got[0].Reason != "content differs" {
+		t.Errorf("got %v, want single DiffResult Rel=a Reason=content differs", got)
+	}
+}
+
+func TestPhaseCompareHashes_differingBySize_and_leftOnly_rightOnly_inResult(t *testing.T) {
+	mtime := NormalizeMtime(time.Unix(1, 0))
+	leftA := FileInfo{Rel: "size", Size: 1, Mtime: mtime, Hash: ""}
+	rightA := FileInfo{Rel: "size", Size: 2, Mtime: mtime, Hash: ""}
+	leftOnly := FileInfo{Rel: "lonly", Size: 10, Mtime: mtime, Hash: ""}
+	rightOnly := FileInfo{Rel: "ronly", Size: 20, Mtime: mtime, Hash: ""}
+	differingBySize := []*Pair{{Rel: "size", Left: &leftA, Right: &rightA}}
+	leftByPath := map[string]*FileInfo{"size": &leftA, "lonly": &leftOnly}
+	rightByPath := map[string]*FileInfo{"size": &rightA, "ronly": &rightOnly}
+	got := PhaseCompareHashes(nil, differingBySize, []string{"lonly"}, []string{"ronly"}, leftByPath, rightByPath)
+	if len(got) != 3 {
+		t.Fatalf("want 3 diffs (size, left-only, right-only), got %d", len(got))
+	}
+	reasons := make(map[string]string)
+	for _, d := range got {
+		reasons[d.Rel] = d.Reason
+	}
+	if reasons["size"] != "size changed" || reasons["lonly"] != "left only" || reasons["ronly"] != "right only" {
+		t.Errorf("reasons = %v", reasons)
+	}
+}
