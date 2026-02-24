@@ -11,15 +11,34 @@ import (
 // Exit code used when Fatal is called so callers can distinguish fatal errors from usage errors.
 const FatalExitCode = 2
 
-// Writes to a main log and a separate error log under a temp dir; used so we can report log paths and keep errors in one place. Safe for concurrent use via mutex.
+// requestKind identifies which operation the worker should perform.
+type requestKind int
+
+const (
+	reqLog requestKind = iota
+	reqLogError
+	reqFatal
+	reqClose
+	reqGetErrorCount
+)
+
+// logRequest is sent to the logger worker; only fields for the request kind are used.
+type logRequest struct {
+	kind      requestKind
+	msg       string
+	err       error
+	done      chan struct{}
+	countResp chan<- int
+}
+
+// Logger writes to a main log and a separate error log under a temp dir; used so we can report log paths and keep errors in one place. Safe for concurrent use via a single worker goroutine and channel.
 type Logger struct {
-	tempDir   string
-	mainPath  string
-	errorPath string
-	mainFile  *os.File
-	errorFile *os.File
-	nonFatal  int
-	mu        sync.Mutex
+	tempDir    string
+	mainPath   string
+	errorPath  string
+	reqCh      chan logRequest
+	errorCount int
+	closeOnce  sync.Once
 }
 
 // Creates a temp dir and two log files (main + errors) with dated names; callers should defer Close and optionally PrintLogPaths so users know where to look.
@@ -43,7 +62,58 @@ func NewLogger() (*Logger, error) {
 		os.RemoveAll(tmp)
 		return nil, err
 	}
-	return &Logger{tempDir: tmp, mainPath: mainPath, errorPath: errorPath, mainFile: mainFile, errorFile: errorFile}, nil
+	logger := &Logger{tempDir: tmp, mainPath: mainPath, errorPath: errorPath, reqCh: make(chan logRequest)}
+	go logger.run(mainFile, errorFile)
+	return logger, nil
+}
+
+// run is the single worker that owns the log files and processes all log requests.
+func (logger *Logger) run(mainFile, errorFile *os.File) {
+	for req := range logger.reqCh {
+		switch req.kind {
+		case reqLog:
+			if mainFile != nil {
+				fmt.Fprintln(mainFile, req.msg)
+				mainFile.Sync()
+			}
+			close(req.done)
+		case reqLogError:
+			logger.errorCount++
+			if mainFile != nil {
+				fmt.Fprintln(mainFile, "error:", req.err.Error())
+				mainFile.Sync()
+			}
+			if errorFile != nil {
+				fmt.Fprintln(errorFile, req.err.Error())
+				errorFile.Sync()
+			}
+			close(req.done)
+		case reqFatal:
+			msg := req.err.Error()
+			if mainFile != nil {
+				fmt.Fprintln(mainFile, "fatal:", msg)
+				mainFile.Sync()
+			}
+			if errorFile != nil {
+				fmt.Fprintln(errorFile, msg)
+				errorFile.Sync()
+			}
+			close(req.done)
+		case reqGetErrorCount:
+			req.countResp <- logger.errorCount
+		case reqClose:
+			if mainFile != nil {
+				mainFile.Close()
+				mainFile = nil
+			}
+			if errorFile != nil {
+				errorFile.Close()
+				errorFile = nil
+			}
+			close(req.done)
+			return
+		}
+	}
 }
 
 // Returns the temp directory path so callers can inspect log files or pass to other tools.
@@ -51,43 +121,24 @@ func (logger *Logger) TempDir() string { return logger.tempDir }
 
 // Appends a line to the main log and syncs; used for normal progress/diff messages. Skips if already closed.
 func (logger *Logger) Log(msg string) {
-	logger.mu.Lock()
-	defer logger.mu.Unlock()
-	if logger.mainFile != nil {
-		fmt.Fprintln(logger.mainFile, msg)
-		logger.mainFile.Sync()
-	}
+	done := make(chan struct{})
+	logger.reqCh <- logRequest{kind: reqLog, msg: msg, done: done}
+	<-done
 }
 
 // Writes the error to both main and error logs and increments the non-fatal count; used so we can report "N errors, check error log" at the end without exiting.
 func (logger *Logger) LogError(err error) {
-	logger.mu.Lock()
-	defer logger.mu.Unlock()
-	logger.nonFatal++
-	if logger.mainFile != nil {
-		fmt.Fprintln(logger.mainFile, "error:", err.Error())
-		logger.mainFile.Sync()
-	}
-	if logger.errorFile != nil {
-		fmt.Fprintln(logger.errorFile, err.Error())
-		logger.errorFile.Sync()
-	}
+	done := make(chan struct{})
+	logger.reqCh <- logRequest{kind: reqLogError, err: err, done: done}
+	<-done
 }
 
 // Logs the error to both files, prints to stderr, then exits with FatalExitCode. Used for unrecoverable setup failures (e.g. can't create logger).
 func (logger *Logger) Fatal(err error) {
-	logger.mu.Lock()
-	msg := err.Error()
-	if logger.mainFile != nil {
-		fmt.Fprintln(logger.mainFile, "fatal:", msg)
-		logger.mainFile.Sync()
-	}
-	if logger.errorFile != nil {
-		fmt.Fprintln(logger.errorFile, msg)
-		logger.errorFile.Sync()
-	}
-	logger.mu.Unlock()
-	fmt.Fprintln(os.Stderr, msg)
+	done := make(chan struct{})
+	logger.reqCh <- logRequest{kind: reqFatal, err: err, done: done}
+	<-done
+	fmt.Fprintln(os.Stderr, err.Error())
 	os.Exit(FatalExitCode)
 }
 
@@ -96,43 +147,29 @@ func (logger *Logger) PrintLogPaths() {
 	if !IsTTY(os.Stdout) {
 		return
 	}
-	logger.mu.Lock()
-	mainPath := logger.mainPath
-	errorPath := logger.errorPath
-	logger.mu.Unlock()
-	if mainPath != "" {
-		fmt.Fprintln(os.Stderr, "Main log:", mainPath)
+	if logger.mainPath != "" {
+		fmt.Fprintln(os.Stderr, "Main log:", logger.mainPath)
 	}
-	if errorPath != "" {
-		fmt.Fprintln(os.Stderr, "Error log:", errorPath)
+	if logger.errorPath != "" {
+		fmt.Fprintln(os.Stderr, "Error log:", logger.errorPath)
 	}
 }
 
 // Returns how many times LogError was called; used to decide exit code and whether to tell the user to check the error log.
-func (logger *Logger) NonFatalCount() int {
-	logger.mu.Lock()
-	defer logger.mu.Unlock()
-	return logger.nonFatal
+func (logger *Logger) ErrorCount() int {
+	resp := make(chan int, 1)
+	logger.reqCh <- logRequest{kind: reqGetErrorCount, countResp: resp}
+	return <-resp
 }
 
-// Closes both log files and clears references so later Log/LogError calls no-op. Returns the first close error if any.
-func (logger *Logger) Close() error {
-	logger.mu.Lock()
-	defer logger.mu.Unlock()
-	var closeError error
-	if logger.mainFile != nil {
-		if closeErr := logger.mainFile.Close(); closeErr != nil {
-			closeError = closeErr
-		}
-		logger.mainFile = nil
-	}
-	if logger.errorFile != nil {
-		if closeErr := logger.errorFile.Close(); closeErr != nil && closeError == nil {
-			closeError = closeErr
-		}
-		logger.errorFile = nil
-	}
-	return closeError
+// Closes both log files; the worker exits so later Log/LogError calls will block. Safe to call multiple times.
+func (logger *Logger) Close() {
+	logger.closeOnce.Do(func() {
+		done := make(chan struct{})
+		logger.reqCh <- logRequest{kind: reqClose, done: done}
+		<-done
+		close(logger.reqCh)
+	})
 }
 
 // Reports whether file is a character device (terminal); used to decide whether to show progress and log paths so we don't spam non-interactive output.

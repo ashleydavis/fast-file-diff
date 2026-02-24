@@ -304,7 +304,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	default:
 		lib.FormatTextTree(diffs, os.Stdout)
 	}
-	if logger.NonFatalCount() > 0 {
+	if logger.ErrorCount() > 0 {
 		if !quiet {
 			fmt.Fprintln(os.Stderr, "Errors occurred; check the error log for details.")
 		}

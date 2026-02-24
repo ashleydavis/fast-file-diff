@@ -4,8 +4,7 @@ A fast CLI that reports which files differ between two directories (by path and 
 
 ## Todo
 
-- Does there need to be so many locks?
-    - Like when getting the value of an integer???
+- Add column to perf test for number of workers.
 
 ## Low priority
 

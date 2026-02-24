@@ -48,21 +48,17 @@ func TestLogger_LogError_writesBothAndIncrementsCount(t *testing.T) {
 	logger, _ := NewLogger()
 	defer logger.Close()
 	logger.LogError(os.ErrNotExist)
-	if logger.NonFatalCount() != 1 {
-		t.Errorf("NonFatalCount() = %d, want 1", logger.NonFatalCount())
+	if logger.ErrorCount() != 1 {
+		t.Errorf("ErrorCount() = %d, want 1", logger.ErrorCount())
 	}
 	logger.LogError(os.ErrClosed)
-	if logger.NonFatalCount() != 2 {
-		t.Errorf("NonFatalCount() = %d, want 2", logger.NonFatalCount())
+	if logger.ErrorCount() != 2 {
+		t.Errorf("ErrorCount() = %d, want 2", logger.ErrorCount())
 	}
 }
 
-func TestLogger_Close_returnsNil(t *testing.T) {
+func TestLogger_Close_idempotent(t *testing.T) {
 	logger, _ := NewLogger()
-	if err := logger.Close(); err != nil {
-		t.Errorf("Close() = %v", err)
-	}
-	if err := logger.Close(); err != nil {
-		t.Errorf("second Close() = %v", err)
-	}
+	logger.Close()
+	logger.Close()
 }
