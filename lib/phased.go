@@ -36,3 +36,49 @@ type ClassifyPairsResult struct {
 	ContentCheckQueue []*Pair // pairs where size is equal but mtime differs (need hash)
 	SameBySizeMtime   []*Pair // pairs where size and mtime are equal (skip content check)
 }
+
+// ValidPhaseNames is the ordered list of phase names for the phased pipeline (walk-left through compare-hashes).
+var ValidPhaseNames = []string{"walk-left", "walk-right", "build-pairs", "classify-pairs", "hash-left", "hash-right", "compare-hashes"}
+
+// ValidPhase returns true if name is one of the valid phase names.
+func ValidPhase(name string) bool {
+	for _, n := range ValidPhaseNames {
+		if n == name {
+			return true
+		}
+	}
+	return false
+}
+
+// PhaseWalkLeft walks the left tree and returns FileInfo for every file. Stub returns nil until implemented.
+func PhaseWalkLeft(leftRoot string, dirBatchSize int) []FileInfo {
+	return nil
+}
+
+// PhaseWalkRight walks the right tree and returns FileInfo for every file. Stub returns nil until implemented.
+func PhaseWalkRight(rightRoot string, dirBatchSize int) []FileInfo {
+	return nil
+}
+
+// PhaseBuildPairs builds pairs and left-only/right-only path lists from left and right FileInfo slices. Stub returns zero value until implemented.
+func PhaseBuildPairs(left, right []FileInfo) BuildPairsResult {
+	return BuildPairsResult{}
+}
+
+// PhaseClassifyPairs classifies pairs by size/mtime into differing-by-size, content-check queue, and same. Stub returns zero value until implemented.
+func PhaseClassifyPairs(pairs []*Pair) ClassifyPairsResult {
+	return ClassifyPairsResult{}
+}
+
+// PhaseHashLeft hashes the left-side file for each pair in contentCheckQueue and sets Pair.Left.Hash. Stub is a no-op until implemented.
+func PhaseHashLeft(leftRoot string, contentCheckQueue []*Pair, hashAlg string, threshold int) {
+}
+
+// PhaseHashRight hashes the right-side file for each pair in contentCheckQueue and sets Pair.Right.Hash. Stub is a no-op until implemented.
+func PhaseHashRight(rightRoot string, contentCheckQueue []*Pair, hashAlg string, threshold int) {
+}
+
+// PhaseCompareHashes produces DiffResults from classified pairs and left-only/right-only paths. Stub returns nil until implemented.
+func PhaseCompareHashes(contentCheckQueue, differingBySize []*Pair, leftOnlyPaths, rightOnlyPaths []string, leftByPath, rightByPath map[string]*FileInfo) []DiffResult {
+	return nil
+}

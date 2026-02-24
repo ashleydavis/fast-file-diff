@@ -89,6 +89,7 @@ var hashAlg string
 var hashThreshold int
 var outputFormat string
 var quiet bool
+var phaseName string
 
 // Single top-level command; requireZeroOrTwoArgs validates args, runRoot does the diff.
 var rootCmd = &cobra.Command{
@@ -112,6 +113,7 @@ func init() {
 	rootCmd.Flags().IntVar(&hashThreshold, "threshold", 10*1024*1024, "Size threshold in bytes: files smaller are read in full to hash, larger are streamed")
 	rootCmd.Flags().StringVar(&outputFormat, "format", "text", "Output format: text, table, json, yaml")
 	rootCmd.Flags().BoolVar(&quiet, "quiet", false, "Suppress progress and final error-log message (for scripting)")
+	rootCmd.Flags().StringVar(&phaseName, "phase", "", "Run only this phase and print its duration to stderr (walk-left, walk-right, build-pairs, classify-pairs, hash-left, hash-right, compare-hashes); unset runs full diff")
 	rootCmd.AddCommand(lsCmd)
 	rootCmd.AddCommand(versionCmd)
 }
@@ -196,6 +198,14 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	defer logger.Close()
 	if !quiet {
 		defer logger.PrintLogPaths()
+	}
+	// When --phase is set, run only the phases needed for that phase, time only that phase, print duration to stderr, and exit.
+	if phaseName != "" {
+		if !lib.ValidPhase(phaseName) {
+			fmt.Fprintf(os.Stderr, "invalid phase %q; valid: walk-left, walk-right, build-pairs, classify-pairs, hash-left, hash-right, compare-hashes\n", phaseName)
+			return fmt.Errorf("invalid phase: %s", phaseName)
+		}
+		return runPhasedPhase(cmd, left, right)
 	}
 	// Print compared directories at start (logger always; stderr when not quiet).
 	logger.Log("left directory: " + left)
@@ -309,6 +319,85 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		os.Exit(ExitNonFatal)
 	}
 	return nil
+}
+
+// runPhasedPhase runs only the phases needed for phaseName's inputs, then runs the requested phase, times only that phase, prints duration to stderr, and returns.
+func runPhasedPhase(cmd *cobra.Command, left, right string) error {
+	var leftInfos []lib.FileInfo
+	var rightInfos []lib.FileInfo
+	var buildResult lib.BuildPairsResult
+	var classifyResult lib.ClassifyPairsResult
+
+	runWalkLeft := func() { leftInfos = lib.PhaseWalkLeft(left, dirBatchSize) }
+	runWalkRight := func() { rightInfos = lib.PhaseWalkRight(right, dirBatchSize) }
+	runBuildPairs := func() { buildResult = lib.PhaseBuildPairs(leftInfos, rightInfos) }
+	runClassifyPairs := func() { classifyResult = lib.PhaseClassifyPairs(buildResult.Pairs) }
+
+	switch phaseName {
+	case "walk-left":
+		start := time.Now()
+		runWalkLeft()
+		fmt.Fprintf(cmd.ErrOrStderr(), "walk-left: %v\n", time.Since(start))
+		return nil
+	case "walk-right":
+		start := time.Now()
+		runWalkRight()
+		fmt.Fprintf(cmd.ErrOrStderr(), "walk-right: %v\n", time.Since(start))
+		return nil
+	case "build-pairs":
+		runWalkLeft()
+		runWalkRight()
+		start := time.Now()
+		runBuildPairs()
+		fmt.Fprintf(cmd.ErrOrStderr(), "build-pairs: %v\n", time.Since(start))
+		return nil
+	case "classify-pairs":
+		runWalkLeft()
+		runWalkRight()
+		runBuildPairs()
+		start := time.Now()
+		runClassifyPairs()
+		fmt.Fprintf(cmd.ErrOrStderr(), "classify-pairs: %v\n", time.Since(start))
+		return nil
+	case "hash-left":
+		runWalkLeft()
+		runWalkRight()
+		runBuildPairs()
+		runClassifyPairs()
+		start := time.Now()
+		lib.PhaseHashLeft(left, classifyResult.ContentCheckQueue, hashAlg, hashThreshold)
+		fmt.Fprintf(cmd.ErrOrStderr(), "hash-left: %v\n", time.Since(start))
+		return nil
+	case "hash-right":
+		runWalkLeft()
+		runWalkRight()
+		runBuildPairs()
+		runClassifyPairs()
+		start := time.Now()
+		lib.PhaseHashRight(right, classifyResult.ContentCheckQueue, hashAlg, hashThreshold)
+		fmt.Fprintf(cmd.ErrOrStderr(), "hash-right: %v\n", time.Since(start))
+		return nil
+	case "compare-hashes":
+		runWalkLeft()
+		runWalkRight()
+		runBuildPairs()
+		runClassifyPairs()
+		lib.PhaseHashLeft(left, classifyResult.ContentCheckQueue, hashAlg, hashThreshold)
+		lib.PhaseHashRight(right, classifyResult.ContentCheckQueue, hashAlg, hashThreshold)
+		leftByPath := make(map[string]*lib.FileInfo)
+		for i := range leftInfos {
+			leftByPath[leftInfos[i].Rel] = &leftInfos[i]
+		}
+		rightByPath := make(map[string]*lib.FileInfo)
+		for i := range rightInfos {
+			rightByPath[rightInfos[i].Rel] = &rightInfos[i]
+		}
+		start := time.Now()
+		_ = lib.PhaseCompareHashes(classifyResult.ContentCheckQueue, classifyResult.DifferingBySize, buildResult.LeftOnlyPaths, buildResult.RightOnlyPaths, leftByPath, rightByPath)
+		fmt.Fprintf(cmd.ErrOrStderr(), "compare-hashes: %v\n", time.Since(start))
+		return nil
+	}
+	return fmt.Errorf("unknown phase: %s", phaseName)
 }
 
 // reportCompareResult appends the result to diffs when different and logs either "different" or "identical" with reason to the logger.

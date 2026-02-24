@@ -22,11 +22,11 @@ This document lists commits in order to implement [PHASED-RESTRUCTURE-SPEC.md](P
 
 **Smoke tests during the refactor:** **Turn the existing smoke tests off** for Commits 2–7 (e.g. skip them in `./check.sh` or the harness). **Re-enable them only on the final commit** (Commit 8). **Only commit the final commit if all smoke tests pass.** Do not modify or delete existing smoke test scripts; only skip running them until the end. New smoke tests for each phase can still run every commit if desired. **Because smoke tests are off, you can remove the old code path (discover + compare) during the refactor**—you do not have to keep it working until the final commit; remove it as soon as the phased pipeline is wired as the default (e.g. in the same commit that makes the phased pipeline the default, or earlier if convenient).
 
-- **Next:** Commit 1
+- **Next:** Commit 3
 
 ---
 
-## - [ ] Commit 1: Add FileInfo and phased pipeline types
+## - [x] Commit 1: Add FileInfo and phased pipeline types
 
 **Message:** Add FileInfo and phased pipeline types
 
@@ -40,7 +40,7 @@ This document lists commits in order to implement [PHASED-RESTRUCTURE-SPEC.md](P
 
 ---
 
-## - [ ] Commit 2: Add --phase CLI flag and stub implementations for all phases
+## - [x] Commit 2: Add --phase CLI flag and stub implementations for all phases
 
 **Message:** Add --phase CLI flag and stub implementations for all phases
 

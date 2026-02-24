@@ -97,6 +97,7 @@ These apply to the diff command; `ls` also accepts `--dir-batch-size`.
 | `--threshold` | 10485760 (10 MiB) | Size in bytes: files smaller are read in full to hash, larger are streamed. |
 | `--format` | text | Output format: `text`, `table`, `json`, `yaml`. |
 | `--quiet` | false | Suppress progress, left/right directory lines, summary on stderr, and final error-log message (for scripting). |
+| `--phase` | (none) | Run only this phase and print its duration to stderr; then exit. Set by **name only**. Unset = run full diff. |
 
 ### Diff (default)
 
@@ -106,6 +107,23 @@ These apply to the diff command; `ls` also accepts `--dir-batch-size`.
 
 - **Arguments:** two directory paths (e.g. `./bin/ffd /path/to/a /path/to/b`).
 - **Output:** list of files that are "different" between the two trees. At start (unless `--quiet`) the left and right directories are printed to stderr; at the end a summary is printed to stderr including those paths again, plus counts and timings. Exit code 0 when run completes; non-zero on usage or I/O errors. See [docs/SPEC.md](docs/SPEC.md) for how the diff works.
+
+### Phases (--phase)
+
+The diff is implemented as seven phases: **walk-left**, **walk-right**, **build-pairs**, **classify-pairs**, **hash-left**, **hash-right**, **compare-hashes**. You can run a single phase by name to time it:
+
+```bash
+./bin/ffd --phase walk-left  /path/to/left /path/to/right   # runs only walk-left, prints e.g. "walk-left: 0.012s" to stderr
+./bin/ffd --phase walk-right /path/to/left /path/to/right
+./bin/ffd --phase build-pairs /path/to/left /path/to/right
+./bin/ffd --phase classify-pairs /path/to/left /path/to/right
+./bin/ffd --phase hash-left /path/to/left /path/to/right
+./bin/ffd --phase hash-right /path/to/left /path/to/right
+./bin/ffd --phase compare-hashes /path/to/left /path/to/right
+```
+
+- **Arguments:** `--phase` takes the phase **name only** (one of the seven above). Invalid names produce an error and exit non-zero.
+- **Behavior:** When `--phase <name>` is set, the CLI runs only the phases needed to produce that phase’s inputs, then runs the requested phase, **times only that phase**, and prints its duration to stderr (e.g. `walk-right: 0.012s`). No diff output is written to stdout; the program then exits. Use this to measure or debug a single phase.
 
 ### ls — list files recursively
 

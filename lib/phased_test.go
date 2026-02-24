@@ -54,3 +54,17 @@ func TestClassifyPairsResult_zeroValue(t *testing.T) {
 		t.Errorf("zero value should have nil slices; got %+v", result)
 	}
 }
+
+func TestValidPhase(t *testing.T) {
+	for _, name := range ValidPhaseNames {
+		if !ValidPhase(name) {
+			t.Errorf("ValidPhase(%q) = false, want true", name)
+		}
+	}
+	invalid := []string{"", "walk", "1", "walk_left", "compare"}
+	for _, name := range invalid {
+		if ValidPhase(name) {
+			t.Errorf("ValidPhase(%q) = true, want false", name)
+		}
+	}
+}

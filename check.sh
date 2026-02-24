@@ -15,6 +15,10 @@ echo "=== build ==="
 ./build.sh
 echo "=== unit tests ==="
 ./test.sh
-echo "=== smoke tests ==="
-./smoke-tests.sh
+if [[ -n "${SKIP_SMOKE:-}" ]]; then
+  echo "=== smoke tests (skipped, SKIP_SMOKE is set) ==="
+else
+  echo "=== smoke tests ==="
+  ./smoke-tests.sh
+fi
 echo "=== check passed ==="
