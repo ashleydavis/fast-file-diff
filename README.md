@@ -2,20 +2,6 @@
 
 A fast CLI that reports which files differ between two directories (by path and content), optimized for speed on large trees.
 
-## Todo
-
-- Add column to perf test for number of workers.
-- The only output to stdout should json or yaml when that is enabled.
-
-## Low priority
-
-- Make sure the releases page documents known vulnerabilities and the checksum.
-- To make use of the workers we should be feeding the compare pipeline as soon as pairs are found.
-- Only show #workers and worker utilization on a particular flag.
-- It would be good to have one set of worker that can handle either type of job.
-    - The priority is on directory scanning.
-    - But workers that are free can start comparing as well.
-
 ## Quick start (latest release)
 
 Pre-built binaries are on the [Releases](https://github.com/ashleydavis/fast-file-diff/releases/latest) page. Download the file for your platform:
@@ -40,7 +26,7 @@ Windows: `ffd.exe C:\path\to\left C:\path\to\right`. Verify downloads with the S
 
 ## Quick start (from source)
 
-Build and run a diff in under a minute:
+Build and run a diff from source code:
 
 ```bash
 ./build.sh

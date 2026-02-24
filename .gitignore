@@ -1,2 +1,4 @@
 bin/
 test/perf/tmp/
+test/format-yaml-left/
+test/format-yaml-right/
