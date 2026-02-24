@@ -37,7 +37,7 @@ jobs:
             arch: amd64
             out: ffd-linux-amd64
             artifact: ffd-linux-amd64
-          - runner: ubuntu-latest
+          - runner: ubuntu-24.04-arm
             os: linux
             arch: arm64
             out: ffd-linux-arm64
