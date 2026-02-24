@@ -3,8 +3,10 @@
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN="${SCRIPT_DIR}/../bin/ffd"
-VALID="${SCRIPT_DIR}/empty-left"
-INVALID="${SCRIPT_DIR}/nonexistent-dir-$$"
+TMP="${SCRIPT_DIR}/tmp"
+VALID="${TMP}/invalid-dir-valid"
+mkdir -p "$VALID"
+INVALID="${TMP}/nonexistent-dir-$$"
 set +e
 "$BIN" "$INVALID" "$VALID" 2>/tmp/ffd-err.$$
 exitcode=$?

@@ -3,8 +3,12 @@
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN="${SCRIPT_DIR}/../bin/ffd"
-LEFT="${SCRIPT_DIR}/diff-left"
-RIGHT="${SCRIPT_DIR}/diff-right"
+TMP="${SCRIPT_DIR}/tmp"
+LEFT="${TMP}/quiet-left"
+RIGHT="${TMP}/quiet-right"
+mkdir -p "$LEFT" "$RIGHT"
+printf '%s' "12345" > "$LEFT/f"
+printf '%s' "123456" > "$RIGHT/f"
 err=$("$BIN" --quiet "$LEFT" "$RIGHT" 2>&1 >/dev/null)
 if echo "$err" | grep -q "processed\|pending\|Main log\|Error log\|check the error log"; then
   echo "With --quiet, stderr should not contain progress or log messages, got: $err" >&2

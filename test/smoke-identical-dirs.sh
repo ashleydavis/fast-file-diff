@@ -3,8 +3,12 @@
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN="${SCRIPT_DIR}/../bin/ffd"
-LEFT="${SCRIPT_DIR}/identical-left"
-RIGHT="${SCRIPT_DIR}/identical-right"
+TMP="${SCRIPT_DIR}/tmp"
+LEFT="${TMP}/identical-dirs-left"
+RIGHT="${TMP}/identical-dirs-right"
+mkdir -p "$LEFT" "$RIGHT"
+printf '%s' "same" > "$LEFT/f"
+printf '%s' "same" > "$RIGHT/f"
 out=$("$BIN" --format text "$LEFT" "$RIGHT" 2>/dev/null)
 exitcode=$?
 if [[ $exitcode -ne 0 ]]; then

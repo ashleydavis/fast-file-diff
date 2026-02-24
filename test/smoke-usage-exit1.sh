@@ -3,7 +3,9 @@
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN="${SCRIPT_DIR}/../bin/ffd"
-VALID="${SCRIPT_DIR}/empty-left"
+TMP="${SCRIPT_DIR}/tmp"
+VALID="${TMP}/usage-exit1-valid"
+mkdir -p "$VALID"
 set +e
 "$BIN" "$VALID" 2>/dev/null
 exitcode=$?

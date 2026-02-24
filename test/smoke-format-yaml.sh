@@ -4,8 +4,9 @@
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN="${SCRIPT_DIR}/../bin/ffd"
-LEFT="${SCRIPT_DIR}/format-yaml-left"
-RIGHT="${SCRIPT_DIR}/format-yaml-right"
+TMP="${SCRIPT_DIR}/tmp"
+LEFT="${TMP}/format-yaml-left"
+RIGHT="${TMP}/format-yaml-right"
 mkdir -p "$LEFT" "$RIGHT"
 printf '%s' "12345" > "$LEFT/f"
 printf '%s' "123456" > "$RIGHT/f"

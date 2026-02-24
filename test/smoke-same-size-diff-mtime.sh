@@ -3,12 +3,13 @@
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN="${SCRIPT_DIR}/../bin/ffd"
-LEFT="${SCRIPT_DIR}/mtime-left"
-RIGHT="${SCRIPT_DIR}/mtime-right"
+TMP="${SCRIPT_DIR}/tmp"
+LEFT="${TMP}/same-size-diff-mtime-left"
+RIGHT="${TMP}/same-size-diff-mtime-right"
 mkdir -p "$LEFT" "$RIGHT"
-echo "aa" > "$LEFT/f"
+printf '%s' "aa" > "$LEFT/f"
 sleep 1
-echo "bb" > "$RIGHT/f"
+printf '%s' "bb" > "$RIGHT/f"
 out=$("$BIN" "$LEFT" "$RIGHT" 2>/dev/null)
 exitcode=$?
 if [[ $exitcode -ne 0 ]]; then

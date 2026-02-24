@@ -3,8 +3,9 @@
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN="${SCRIPT_DIR}/../bin/ffd"
-LEFT="${SCRIPT_DIR}/empty-left"
-RIGHT="${SCRIPT_DIR}/empty-right"
+TMP="${SCRIPT_DIR}/tmp"
+LEFT="${TMP}/two-empty-dirs-left"
+RIGHT="${TMP}/two-empty-dirs-right"
 mkdir -p "$LEFT" "$RIGHT"
 "$BIN" "$LEFT" "$RIGHT" >/tmp/ffd-out.$$ 2>/tmp/ffd-err.$$
 exitcode=$?

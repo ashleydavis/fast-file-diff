@@ -3,19 +3,23 @@
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN="${SCRIPT_DIR}/../bin/ffd"
-LEFT="${SCRIPT_DIR}/identical-left"
-RIGHT="${SCRIPT_DIR}/identical-right"
+TMP="${SCRIPT_DIR}/tmp"
+LEFT="${TMP}/sha256-identical-left"
+RIGHT="${TMP}/sha256-identical-right"
+mkdir -p "$LEFT" "$RIGHT"
+printf '%s' "same" > "$LEFT/f"
+printf '%s' "same" > "$RIGHT/f"
 out=$("$BIN" --hash sha256 --format text "$LEFT" "$RIGHT" 2>/dev/null)
 if [[ -n "$out" ]] && echo "$out" | grep -qE "size changed|content differs"; then
   echo "Expected no size/content diff for identical dirs with sha256" >&2
   exit 1
 fi
-mkdir -p "${SCRIPT_DIR}/hash-sha256-left" "${SCRIPT_DIR}/hash-sha256-right"
-echo -n "aa" > "${SCRIPT_DIR}/hash-sha256-left/f"
+mkdir -p "${TMP}/sha256-diff-left" "${TMP}/sha256-diff-right"
+printf '%s' "aa" > "${TMP}/sha256-diff-left/f"
 sleep 1
-echo -n "bb" > "${SCRIPT_DIR}/hash-sha256-right/f"
-LEFT="${SCRIPT_DIR}/hash-sha256-left"
-RIGHT="${SCRIPT_DIR}/hash-sha256-right"
+printf '%s' "bb" > "${TMP}/sha256-diff-right/f"
+LEFT="${TMP}/sha256-diff-left"
+RIGHT="${TMP}/sha256-diff-right"
 out=$("$BIN" --hash sha256 --format text "$LEFT" "$RIGHT" 2>/dev/null)
 if ! echo "$out" | grep -q "content differs"; then
   echo "Expected diff with --hash sha256 for different content" >&2

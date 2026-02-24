@@ -3,10 +3,14 @@
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN="${SCRIPT_DIR}/../bin/ffd"
+TMP="${SCRIPT_DIR}/tmp"
 
 # Identical dirs with --full: no diff, exit 0
-LEFT="${SCRIPT_DIR}/identical-left"
-RIGHT="${SCRIPT_DIR}/identical-right"
+LEFT="${TMP}/full-identical-left"
+RIGHT="${TMP}/full-identical-right"
+mkdir -p "$LEFT" "$RIGHT"
+printf '%s' "same" > "$LEFT/f"
+printf '%s' "same" > "$RIGHT/f"
 out=$("$BIN" --full --format text "$LEFT" "$RIGHT" 2>/dev/null)
 exitcode=$?
 if [[ $exitcode -ne 0 ]]; then
@@ -19,12 +23,12 @@ if [[ -n "$out" ]] && echo "$out" | grep -qE "size changed|content differs"; the
 fi
 
 # Same size, different content with --full: content differs reported
-LEFT="${SCRIPT_DIR}/mtime-left"
-RIGHT="${SCRIPT_DIR}/mtime-right"
+LEFT="${TMP}/full-mtime-left"
+RIGHT="${TMP}/full-mtime-right"
 mkdir -p "$LEFT" "$RIGHT"
-echo "aa" > "$LEFT/f"
+printf '%s' "aa" > "$LEFT/f"
 sleep 1
-echo "bb" > "$RIGHT/f"
+printf '%s' "bb" > "$RIGHT/f"
 out=$("$BIN" --full "$LEFT" "$RIGHT" 2>/dev/null)
 exitcode=$?
 if [[ $exitcode -ne 0 ]]; then
