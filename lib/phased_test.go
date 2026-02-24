@@ -241,3 +241,22 @@ func TestPhaseClassifyPairs_mix(t *testing.T) {
 		t.Errorf("DifferingBySize=%d SameBySizeMtime=%d ContentCheckQueue=%d, want 1,1,1", len(got.DifferingBySize), len(got.SameBySizeMtime), len(got.ContentCheckQueue))
 	}
 }
+
+func TestPhaseHashLeft_and_PhaseHashRight_setHashes(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "f")
+	if err := os.WriteFile(path, []byte("hello"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	left := FileInfo{Rel: "f", Size: 5, Mtime: time.Time{}, Hash: ""}
+	right := FileInfo{Rel: "f", Size: 5, Mtime: time.Time{}, Hash: ""}
+	pairs := []*Pair{{Rel: "f", Left: &left, Right: &right}}
+	PhaseHashLeft(dir, pairs, "xxhash", 10*1024*1024)
+	PhaseHashRight(dir, pairs, "xxhash", 10*1024*1024)
+	if left.Hash == "" || right.Hash == "" {
+		t.Errorf("hashes not set: Left.Hash=%q Right.Hash=%q", left.Hash, right.Hash)
+	}
+	if left.Hash != right.Hash {
+		t.Errorf("same file should have same hash: %q vs %q", left.Hash, right.Hash)
+	}
+}

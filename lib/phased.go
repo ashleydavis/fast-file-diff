@@ -1,6 +1,9 @@
 package lib
 
-import "time"
+import (
+	"path/filepath"
+	"time"
+)
 
 // FileInfo holds metadata for one discovered file: relative path, size, mtime (normalized to second), and optional hash.
 // Used by the phased pipeline; Hash is filled in only for files that need content comparison (hash-left, hash-right).
@@ -120,12 +123,30 @@ func PhaseClassifyPairs(pairs []*Pair) ClassifyPairsResult {
 	}
 }
 
-// PhaseHashLeft hashes the left-side file for each pair in contentCheckQueue and sets Pair.Left.Hash. Stub is a no-op until implemented.
-func PhaseHashLeft(leftRoot string, contentCheckQueue []*Pair, hashAlg string, threshold int) {
+// hashContentCheckQueue loads and hashes the file at root+rel for each pair and assigns the hash to the left or right FileInfo. Used by PhaseHashLeft and PhaseHashRight.
+func hashContentCheckQueue(root string, contentCheckQueue []*Pair, hashAlg string, threshold int, assignToLeft bool) {
+	for _, pair := range contentCheckQueue {
+		path := filepath.Join(root, pair.Rel)
+		hash, err := HashFile(path, hashAlg, threshold)
+		if err != nil {
+			continue // non-fatal: leave Hash empty; compare-hashes can report as error
+		}
+		if assignToLeft {
+			pair.Left.Hash = hash
+		} else {
+			pair.Right.Hash = hash
+		}
+	}
 }
 
-// PhaseHashRight hashes the right-side file for each pair in contentCheckQueue and sets Pair.Right.Hash. Stub is a no-op until implemented.
+// PhaseHashLeft hashes the left-side file for each pair in contentCheckQueue and sets Pair.Left.Hash.
+func PhaseHashLeft(leftRoot string, contentCheckQueue []*Pair, hashAlg string, threshold int) {
+	hashContentCheckQueue(leftRoot, contentCheckQueue, hashAlg, threshold, true)
+}
+
+// PhaseHashRight hashes the right-side file for each pair in contentCheckQueue and sets Pair.Right.Hash.
 func PhaseHashRight(rightRoot string, contentCheckQueue []*Pair, hashAlg string, threshold int) {
+	hashContentCheckQueue(rightRoot, contentCheckQueue, hashAlg, threshold, false)
 }
 
 // PhaseCompareHashes produces DiffResults from classified pairs and left-only/right-only paths. Stub returns nil until implemented.

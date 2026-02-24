@@ -12,7 +12,12 @@ import (
 	"github.com/cespare/xxhash/v2"
 )
 
-// Hashes the file at path with the given algorithm; files smaller than threshold are read fully (hashFull), larger ones are streamed (hashStream) to bound memory.
+// HashFile hashes the file at path with the given algorithm; files smaller than threshold are read fully, larger ones are streamed. Exported for use by the phased pipeline (hash-left, hash-right).
+func HashFile(path, algorithm string, threshold int) (string, error) {
+	return hashFile(path, algorithm, threshold)
+}
+
+// hashFile is the internal implementation; HashFile is the exported wrapper.
 func hashFile(path, algorithm string, threshold int) (string, error) {
 	file, err := os.Open(path)
 	if err != nil {
