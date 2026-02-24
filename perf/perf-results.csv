@@ -1,5 +1,5 @@
-date_iso,machine,min_sec_per_pair,max_sec_per_pair,avg_sec_per_pair,longest_test_total_sec,longest_test
-2026-02-23T15:38:33+10:00,"Linux x86_64 24cores Intel(R) Core(TM) Ultra 9 285K",0,0.027882,0.00506793,125.593,all_same_100000
-2026-02-24T09:31:27+10:00,"Linux x86_64 24cores Intel(R) Core(TM) Ultra 9 285K",0,0.027914,0.00503146,125.708,all_same_100000
-2026-02-24T09:55:29+10:00,"Linux x86_64 24cores Intel(R) Core(TM) Ultra 9 285K",0,0.030643,0.00536679,123.936,all_different_100000
-2026-02-24T12:00:37+10:00,"Linux x86_64 24cores Intel(R) Core(TM) Ultra 9 285K",0,0.028062,0.00509121,128.835,all_same_100000
+date_iso,machine,workers,min_sec_per_pair,max_sec_per_pair,avg_sec_per_pair,longest_test_total_sec,longest_test
+2026-02-23T15:38:33+10:00,"Linux x86_64 24cores Intel(R) Core(TM) Ultra 9 285K",24,0,0.027882,0.00506793,125.593,all_same_100000
+2026-02-24T09:31:27+10:00,"Linux x86_64 24cores Intel(R) Core(TM) Ultra 9 285K",24,0,0.027914,0.00503146,125.708,all_same_100000
+2026-02-24T09:55:29+10:00,"Linux x86_64 24cores Intel(R) Core(TM) Ultra 9 285K",24,0,0.030643,0.00536679,123.936,all_different_100000
+2026-02-24T12:00:37+10:00,"Linux x86_64 24cores Intel(R) Core(TM) Ultra 9 285K",24,0,0.028062,0.00509121,128.835,all_same_100000

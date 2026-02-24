@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Performance tests for ffd. Builds optimized binary, generates test data under test/perf/tmp/, runs scenarios, appends one row per run to perf/perf-results.csv.
-# Each CSV row: date_iso, machine, min_sec_per_pair, max_sec_per_pair, avg_sec_per_pair, longest_test_total_sec, longest_test (scenario_filecount of the test that took the longest).
+# Each CSV row: date_iso, machine, workers, min_sec_per_pair, max_sec_per_pair, avg_sec_per_pair, longest_test_total_sec, longest_test (scenario_filecount of the test that took the longest).
 # machine describes the host (OS, arch, cores, CPU model) so results can be compared across runs on different hardware.
 # Usage: ./perf-test.sh (run from project root)
 set -e
+NUM_WORKERS=24
 BIN="./bin/ffd"
 PERF_TMP_DIR="./test/perf/tmp"
 PERF_OUTPUT_DIR="./perf"
@@ -37,7 +38,7 @@ MACHINE_SPEC=$(get_machine_spec)
 echo "Machine: $MACHINE_SPEC"
 
 if [[ ! -f "$CSV" ]]; then
-  echo "date_iso,machine,min_sec_per_pair,max_sec_per_pair,avg_sec_per_pair,longest_test_total_sec,longest_test" > "$CSV"
+  echo "date_iso,machine,workers,min_sec_per_pair,max_sec_per_pair,avg_sec_per_pair,longest_test_total_sec,longest_test" > "$CSV"
 fi
 
 gen_files() {
@@ -85,7 +86,7 @@ run_scenario() {
   esac
   local start end total_sec avg_sec_per_pair
   start=$(date +%s.%N)
-  "$BIN" --quiet "$left" "$right" >/dev/null 2>&1
+  "$BIN" --quiet --workers "$NUM_WORKERS" "$left" "$right" >/dev/null 2>&1
   end=$(date +%s.%N)
   total_sec=$(echo "$end - $start" | bc)
   avg_sec_per_pair="0"
@@ -119,5 +120,5 @@ END {
   print min_avg "," max_avg "," avg_sec "," max_total "," longest
 }' "$RESULTS_TMP")
 qm="${MACHINE_SPEC//\"/\"\"}"
-echo "$date_iso,\"$qm\",$stats" >> "$CSV"
+echo "$date_iso,\"$qm\",$NUM_WORKERS,$stats" >> "$CSV"
 echo "Results appended to $CSV (one row: min/max/avg sec per pair, longest test total, longest test)"
