@@ -1,0 +1,6 @@
+- path: f
+  left_size: 5
+  right_size: 6
+  left_mtime: "TIMESTAMP"
+  right_mtime: "TIMESTAMP"
+  reason: size changed

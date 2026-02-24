@@ -73,7 +73,7 @@ func FormatTable(diffs []DiffResult, w *os.File) {
 		if !diff.RightMtime.IsZero() {
 			rightMtimeStr = diff.RightMtime.Format(time.RFC3339)
 		}
-		fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%s\t%s\t%s\t%s\n", diff.Rel, diff.LeftSize, diff.RightSize, leftMtimeStr, rightMtimeStr, diff.Reason, diff.LeftHash, diff.RightHash)
+		fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%s\t%s\t%s\t%s\n", filepath.ToSlash(diff.Rel), diff.LeftSize, diff.RightSize, leftMtimeStr, rightMtimeStr, diff.Reason, diff.LeftHash, diff.RightHash)
 	}
 }
 
@@ -102,7 +102,7 @@ func FormatJSON(diffs []DiffResult, w *os.File) {
 		if !diff.RightMtime.IsZero() {
 			rightMtimeStr = diff.RightMtime.Format(time.RFC3339)
 		}
-		items = append(items, item{diff.Rel, diff.LeftSize, diff.RightSize, leftMtimeStr, rightMtimeStr, diff.Reason, diff.LeftHash, diff.RightHash})
+		items = append(items, item{filepath.ToSlash(diff.Rel), diff.LeftSize, diff.RightSize, leftMtimeStr, rightMtimeStr, diff.Reason, diff.LeftHash, diff.RightHash})
 	}
 	encoder := json.NewEncoder(w)
 	encoder.SetIndent("", "  ")
@@ -134,7 +134,7 @@ func FormatYAML(diffs []DiffResult, w *os.File) {
 		if !diff.RightMtime.IsZero() {
 			rightMtimeStr = diff.RightMtime.Format(time.RFC3339)
 		}
-		items = append(items, item{diff.Rel, diff.LeftSize, diff.RightSize, leftMtimeStr, rightMtimeStr, diff.Reason, diff.LeftHash, diff.RightHash})
+		items = append(items, item{filepath.ToSlash(diff.Rel), diff.LeftSize, diff.RightSize, leftMtimeStr, rightMtimeStr, diff.Reason, diff.LeftHash, diff.RightHash})
 	}
 	encoder := yaml.NewEncoder(w)
 	encoder.Encode(items)

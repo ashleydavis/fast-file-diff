@@ -162,7 +162,7 @@ func runLs(cmd *cobra.Command, args []string) error {
 	var count atomic.Int32
 	go func() {
 		for file := range fileCh {
-			fmt.Fprintln(cmd.OutOrStdout(), file.Rel)
+			fmt.Fprintln(cmd.OutOrStdout(), filepath.ToSlash(file.Rel))
 			count.Add(1)
 		}
 		close(doneCh)

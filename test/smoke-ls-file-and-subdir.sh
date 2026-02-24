@@ -8,7 +8,8 @@ if [[ ! -d "$DIR" ]]; then
   echo "Missing test dir $DIR" >&2
   exit 1
 fi
-out=$(echo "$("$BIN" ls "$DIR" 2>/dev/null)" | sort)
+# Normalize path separators to / so test passes on Windows (program may output \ or /)
+out=$(echo "$("$BIN" ls "$DIR" 2>/dev/null)" | sort | tr '\\' '/')
 want=$'sub/nested\ntop'
 if [[ "$out" != "$want" ]]; then
   echo "Expected 'top' and 'sub/nested', got: $out" >&2
