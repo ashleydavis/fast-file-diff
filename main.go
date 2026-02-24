@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -244,34 +245,37 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	}
 	elapsed := time.Since(startTime)
 
-	// Log each pair as identical or different (same format as previous reportCompareResult behavior).
+	// Collect per-file state and left/right-only lists, then write to the log in one batch to avoid one Sync per line.
+	var logLines []string
 	for _, pair := range classifyResult.SameBySizeMtime {
-		logger.Log("identical: " + pair.Rel + " (same size and mtime)")
+		logLines = append(logLines, "identical: "+pair.Rel+" (same size and mtime)")
 	}
 	for _, pair := range classifyResult.DifferingBySize {
-		logger.Log("different: " + pair.Rel + " (size changed)")
+		logLines = append(logLines, "different: "+pair.Rel+" (size changed)")
 	}
 	for _, pair := range classifyResult.ContentCheckQueue {
 		if pair.Left.Hash == pair.Right.Hash {
-			logger.Log("identical: " + pair.Rel + " (same hash)")
+			logLines = append(logLines, "identical: "+pair.Rel+" (same hash)")
 		} else {
-			logger.Log("different: " + pair.Rel + " (content differs)")
+			logLines = append(logLines, "different: "+pair.Rel+" (content differs)")
 		}
 	}
 	for _, relativePath := range buildResult.LeftOnlyPaths {
-		logger.Log("different: " + relativePath + " (left only)")
+		logLines = append(logLines, "different: "+relativePath+" (left only)")
 	}
 	for _, relativePath := range buildResult.RightOnlyPaths {
-		logger.Log("different: " + relativePath + " (right only)")
+		logLines = append(logLines, "different: "+relativePath+" (right only)")
 	}
-
-	logger.Log("left-only files: " + fmt.Sprintf("%d", len(buildResult.LeftOnlyPaths)))
+	logLines = append(logLines, "left-only files: "+fmt.Sprintf("%d", len(buildResult.LeftOnlyPaths)))
 	for _, relativePath := range buildResult.LeftOnlyPaths {
-		logger.Log("  " + relativePath)
+		logLines = append(logLines, "  "+relativePath)
 	}
-	logger.Log("right-only files: " + fmt.Sprintf("%d", len(buildResult.RightOnlyPaths)))
+	logLines = append(logLines, "right-only files: "+fmt.Sprintf("%d", len(buildResult.RightOnlyPaths)))
 	for _, relativePath := range buildResult.RightOnlyPaths {
-		logger.Log("  " + relativePath)
+		logLines = append(logLines, "  "+relativePath)
+	}
+	if len(logLines) > 0 {
+		logger.Log(strings.Join(logLines, "\n"))
 	}
 	displaySummary(logger, !quiet, runSummary{
 		leftDir:                  left,
