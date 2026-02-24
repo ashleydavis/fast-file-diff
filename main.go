@@ -148,22 +148,28 @@ func requireZeroOrTwoArgs(cmd *cobra.Command, args []string) error {
 	return fmt.Errorf("requires 0 or 2 arguments, got %d", len(args))
 }
 
-// runLs walks the given directory and prints each file's relative path to stdout (one per line).
+// runLs discovers files under the given directory and prints each relative path to stdout (one per line) as they are found.
 func runLs(cmd *cobra.Command, args []string) error {
 	root := args[0]
 	if err := lib.EnsureDir(root); err != nil {
 		return fmt.Errorf("not a directory: %w", err)
 	}
 	start := time.Now()
-	var count int
-	lib.WalkTree(root, func(rel string, isDir bool) {
-		if !isDir {
-			count++
-			fmt.Fprintln(cmd.OutOrStdout(), rel)
+	fileCh := make(chan lib.DiscoveredFile, 256)
+	doneCh := make(chan struct{})
+	var count atomic.Int32
+	go func() {
+		for file := range fileCh {
+			fmt.Fprintln(cmd.OutOrStdout(), file.Rel)
+			count.Add(1)
 		}
-	})
+		close(doneCh)
+	}()
+	util := lib.NewWorkerUtilization(numWorkers, 30)
+	go lib.Discover([]lib.DirJob{{Root: root, RelDir: "", Side: lib.SideLeft}}, fileCh, dirBatchSize, numWorkers, util)
+	<-doneCh
 	elapsed := time.Since(start)
-	fmt.Fprintf(cmd.ErrOrStderr(), "Listed %d files in %v\n", count, elapsed.Round(time.Millisecond))
+	fmt.Fprintf(cmd.ErrOrStderr(), "Listed %d files in %v\n", count.Load(), elapsed.Round(time.Millisecond))
 	return nil
 }
 
@@ -206,12 +212,21 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	progressCounts := &lib.ProgressCounts{}
 
 	// Phase 1: discover all file pairs by walking both trees.
+	walkFileCh := make(chan lib.DiscoveredFile, 256)
 	walkDoneCh := make(chan struct{})
+	go func() {
+		for file := range walkFileCh {
+			set.Add(file.Rel, file.Side)
+		}
+		close(walkDoneCh)
+	}()
 	const utilWindowTicks = 30 // ~3 seconds at 100ms tick; longer window so "workers active" is meaningful when work is bursty
-	walkWorkerUtilization := lib.NewWorkerUtilization(numWorkers, utilWindowTicks)
-	go lib.WalkBothTrees(left, right, dirBatchSize, numWorkers, logger, set, walkDoneCh, walkWorkerUtilization)
+	discoveryWorkerUtilization := lib.NewWorkerUtilization(numWorkers, utilWindowTicks)
+	go lib.Discover(
+		[]lib.DirJob{{Root: left, RelDir: "", Side: lib.SideLeft}, {Root: right, RelDir: "", Side: lib.SideRight}},
+		walkFileCh, dirBatchSize, numWorkers, discoveryWorkerUtilization)
 	if !quiet && lib.IsTTY(os.Stderr) {
-		go discoveryProgressLoop(set, walkDoneCh, numWorkers, walkWorkerUtilization)
+		go discoveryProgressLoop(set, walkDoneCh, numWorkers, discoveryWorkerUtilization)
 	}
 	<-walkDoneCh
 	scanDuration := time.Since(startTime)
@@ -220,30 +235,13 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	totalCompared := len(pairPaths)
 
 	var diffs []lib.DiffResult
-	var pairJobs []lib.PairJob
-	for _, relativePath := range pairPaths {
-		pairJobs = append(pairJobs, lib.PairJob{Rel: relativePath})
-	}
-	progressCounts.TotalPairs = int32(len(pairJobs))
-	if len(pairJobs) > 0 {
-		progressCounts.WorkerProcessed = make([]int32, numWorkers)
-	}
-
 	compareWorkerUtilization := lib.NewWorkerUtilization(numWorkers, utilWindowTicks)
-
 	compareStart := time.Now()
-	pairCh := make(chan lib.PairJob, len(pairJobs)+1)
-	go func() {
-		for _, job := range pairJobs {
-			pairCh <- job
-		}
-		close(pairCh)
-	}()
-	go lib.RunWorkers(left, right, numWorkers, hashAlg, hashThreshold, pairCh, compareResultCh, progressCounts, compareWorkerUtilization)
+	go lib.Compare(left, right, pairPaths, numWorkers, hashAlg, hashThreshold, compareResultCh, progressCounts, compareWorkerUtilization)
 
 	compareDoneCh := make(chan struct{})
 	if !quiet && lib.IsTTY(os.Stderr) {
-		go progressLoop(progressCounts, compareDoneCh, numWorkers, compareWorkerUtilization)
+		go compareProgressLoop(progressCounts, compareDoneCh, numWorkers, compareWorkerUtilization)
 	}
 	for result := range compareResultCh {
 		reportCompareResult(result, &diffs, logger)
@@ -352,7 +350,7 @@ func estimateRemainingFromElapsed(elapsed time.Duration, processed, pending int3
 	return averagePerPair * time.Duration(pending)
 }
 
-// Uses progress counts and start time (from ProgressCounts) to compute remaining time; used by progressLoop with atomically loaded values.
+// Uses progress counts and start time (from ProgressCounts) to compute remaining time; used by compareProgressLoop with atomically loaded values.
 func estimateRemainingDuration(processed, pending int32, startTimeUnixNano int64) time.Duration {
 	if startTimeUnixNano == 0 {
 		return 0
@@ -367,7 +365,7 @@ func writeProgressLine(format string, args ...interface{}) {
 }
 
 // Prints "comparing: N of M, ~Xs remaining" to stderr until doneCh closes. If workerUtilization is non-nil, appends the percentage of workers utilized in the last second (from workerUtilization.Tick()).
-func progressLoop(progressCounts *lib.ProgressCounts, doneCh <-chan struct{}, numWorkers int, workerUtilization *lib.WorkerUtilization) {
+func compareProgressLoop(progressCounts *lib.ProgressCounts, doneCh <-chan struct{}, numWorkers int, workerUtilization *lib.WorkerUtilization) {
 	tick := time.NewTicker(100 * time.Millisecond)
 	defer tick.Stop()
 	for {

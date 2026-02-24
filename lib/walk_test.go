@@ -22,13 +22,22 @@ func TestWalkTree_collectsRelativePaths(t *testing.T) {
 		t.Fatal(err)
 	}
 	var dirs, files []string
-	walkTree(root, func(rel string, isDir bool) {
-		if isDir {
-			dirs = append(dirs, rel)
-		} else {
-			files = append(files, rel)
-		}
-	})
+	var walk func(baseRoot, baseRel string)
+	walk = func(baseRoot, baseRel string) {
+		WalkTree(baseRoot, 4096, func(rel string, isDir bool) {
+			fullRel := rel
+			if baseRel != "" {
+				fullRel = filepath.Join(baseRel, rel)
+			}
+			if isDir {
+				dirs = append(dirs, fullRel)
+				walk(filepath.Join(baseRoot, rel), fullRel)
+			} else {
+				files = append(files, fullRel)
+			}
+		})
+	}
+	walk(root, "")
 	sort.Strings(dirs)
 	sort.Strings(files)
 	if len(dirs) < 2 {
@@ -58,11 +67,21 @@ func TestWalkTree_regularFilesOnly(t *testing.T) {
 		t.Skip("symlink not supported")
 	}
 	var files []string
-	walkTree(root, func(rel string, isDir bool) {
-		if !isDir {
-			files = append(files, rel)
-		}
-	})
+	var walk func(baseRoot, baseRel string)
+	walk = func(baseRoot, baseRel string) {
+		WalkTree(baseRoot, 4096, func(rel string, isDir bool) {
+			fullRel := rel
+			if baseRel != "" {
+				fullRel = filepath.Join(baseRel, rel)
+			}
+			if !isDir {
+				files = append(files, fullRel)
+			} else {
+				walk(filepath.Join(baseRoot, rel), fullRel)
+			}
+		})
+	}
+	walk(root, "")
 	if len(files) != 1 || files[0] != "f" {
 		t.Errorf("expected only regular file f, got %v", files)
 	}

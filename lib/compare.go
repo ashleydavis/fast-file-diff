@@ -66,9 +66,13 @@ func comparePair(leftRoot, rightRoot, relativePath string, hashAlg string, thres
 	return true, "content differs", leftHash, rightHash, leftSize, rightSize, leftMtime, rightMtime
 }
 
-// RunWorkers starts numWorkers workers that read from pairCh, compare each pair, and send one CompareResult per pair to resultCh (Diff set when different, nil when identical).
-// progress and workerUtilization must be non-nil. RunWorkers closes resultCh when done.
-func RunWorkers(leftRoot, rightRoot string, numWorkers int, hashAlg string, threshold int, pairCh <-chan PairJob, resultCh chan<- CompareResult, progress *ProgressCounts, workerUtilization *WorkerUtilization) {
+// Compare runs the comparison phase: numWorkers workers compare each path in pairPaths (size/mtime/hash as needed) and send one CompareResult per pair to resultCh (Diff set when different, nil when identical).
+// progress and workerUtilization must be non-nil. Compare sets progress.TotalPairs and progress.WorkerProcessed, feeds pairs internally, and closes resultCh when done.
+func Compare(leftRoot, rightRoot string, pairPaths []string, numWorkers int, hashAlg string, threshold int, resultCh chan<- CompareResult, progress *ProgressCounts, workerUtilization *WorkerUtilization) {
+	progress.TotalPairs = int32(len(pairPaths))
+	if len(pairPaths) > 0 {
+		progress.WorkerProcessed = make([]int32, numWorkers)
+	}
 	rec := NewProgressRecorder(progress, workerUtilization)
 	workCh := make(chan PairJob, numWorkers*2)
 	var wg sync.WaitGroup
@@ -88,10 +92,17 @@ func RunWorkers(leftRoot, rightRoot string, numWorkers int, hashAlg string, thre
 			}
 		}()
 	}
+	pairCh := make(chan PairJob, len(pairPaths)+1)
+	go func() {
+		for _, rel := range pairPaths {
+			atomic.CompareAndSwapInt64(&progress.StartTimeUnixNano, 0, time.Now().UnixNano())
+			atomic.AddInt32(&progress.Enqueued, 1)
+			pairCh <- PairJob{Rel: rel}
+		}
+		close(pairCh)
+	}()
 	go func() {
 		for job := range pairCh {
-			atomic.AddInt32(&progress.Enqueued, 1)
-			atomic.CompareAndSwapInt64(&progress.StartTimeUnixNano, 0, time.Now().UnixNano())
 			workCh <- job
 		}
 		close(workCh)

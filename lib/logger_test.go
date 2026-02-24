@@ -62,3 +62,29 @@ func TestLogger_Close_idempotent(t *testing.T) {
 	logger.Close()
 	logger.Close()
 }
+
+func TestIsTTY_regularFileReturnsFalse(t *testing.T) {
+	f, err := os.CreateTemp(t.TempDir(), "tty")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	if IsTTY(f) {
+		t.Error("IsTTY(regular file) should be false")
+	}
+}
+
+func TestIsTTY_nilReturnsFalse(t *testing.T) {
+	if IsTTY(nil) {
+		t.Error("IsTTY(nil) should be false")
+	}
+}
+
+func TestLogger_PrintLogPaths_doesNotPanic(t *testing.T) {
+	logger, err := NewLogger()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer logger.Close()
+	logger.PrintLogPaths()
+}

@@ -5,6 +5,7 @@ A fast CLI that reports which files differ between two directories (by path and 
 ## Todo
 
 - Add column to perf test for number of workers.
+- The only output to stdout should json or yaml when that is enabled.
 
 ## Low priority
 
