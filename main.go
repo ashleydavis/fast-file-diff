@@ -89,6 +89,7 @@ var hashAlg string
 var hashThreshold int
 var outputFormat string
 var quiet bool
+var full bool
 
 // Single top-level command; requireZeroOrTwoArgs validates args, runRoot does the diff.
 var rootCmd = &cobra.Command{
@@ -112,6 +113,7 @@ func init() {
 	rootCmd.Flags().IntVar(&hashThreshold, "threshold", 10*1024*1024, "Size threshold in bytes: files smaller are read in full to hash, larger are streamed")
 	rootCmd.Flags().StringVar(&outputFormat, "format", "text", "Output format: text, table, json, yaml")
 	rootCmd.Flags().BoolVar(&quiet, "quiet", false, "Suppress progress and final error-log message (for scripting)")
+	rootCmd.Flags().BoolVar(&full, "full", false, "Always hash file contents for every pair (ignore same size+mtime shortcut)")
 	rootCmd.AddCommand(lsCmd)
 	rootCmd.AddCommand(versionCmd)
 }
@@ -237,7 +239,7 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	var diffs []lib.DiffResult
 	compareWorkerUtilization := lib.NewWorkerUtilization(numWorkers, utilWindowTicks)
 	compareStart := time.Now()
-	go lib.Compare(left, right, pairPaths, numWorkers, hashAlg, hashThreshold, compareResultCh, progressCounts, compareWorkerUtilization)
+	go lib.Compare(left, right, pairPaths, numWorkers, hashAlg, hashThreshold, full, compareResultCh, progressCounts, compareWorkerUtilization)
 
 	compareDoneCh := make(chan struct{})
 	if !quiet && lib.IsTTY(os.Stderr) {

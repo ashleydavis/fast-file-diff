@@ -97,6 +97,7 @@ These apply to the diff command; `ls` also accepts `--dir-batch-size`.
 | `--threshold` | 10485760 (10 MiB) | Size in bytes: files smaller are read in full to hash, larger are streamed. |
 | `--format` | text | Output format: `text`, `table`, `json`, `yaml`. |
 | `--quiet` | false | Suppress progress, left/right directory lines, summary on stderr, and final error-log message (for scripting). |
+| `--full` | false | Always hash file contents for every pair; do not skip hashing when size and mtime already match (slower but verifies content). |
 
 ### Diff (default)
 

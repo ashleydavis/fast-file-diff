@@ -17,7 +17,7 @@ func TestComparePair_sameFile(t *testing.T) {
 	content := []byte("same")
 	os.WriteFile(filepath.Join(left, "f"), content, 0644)
 	os.WriteFile(filepath.Join(right, "f"), content, 0644)
-	diff, _, _, _, _, _, _, _ := comparePair(left, right, "f", "xxhash", 10<<20)
+	diff, _, _, _, _, _, _, _ := comparePair(left, right, "f", "xxhash", 10<<20, false)
 	if diff {
 		t.Error("comparePair(same file) = true; want same")
 	}
@@ -34,7 +34,7 @@ func TestComparePair_sameSizeDifferentMtime(t *testing.T) {
 	os.WriteFile(filepath.Join(left, "f"), []byte("aa"), 0644)
 	time.Sleep(1 * time.Second)
 	os.WriteFile(filepath.Join(right, "f"), []byte("bb"), 0644)
-	diff, reason, lHash, rHash, _, _, _, _ := comparePair(left, right, "f", "xxhash", 10<<20)
+	diff, reason, lHash, rHash, _, _, _, _ := comparePair(left, right, "f", "xxhash", 10<<20, false)
 	if !diff {
 		t.Error("comparePair = false; want different")
 	}
@@ -59,7 +59,7 @@ func TestCompare_onePair(t *testing.T) {
 	resultCh := make(chan CompareResult, 1)
 	progress := &ProgressCounts{}
 	util := NewWorkerUtilization(1, 10)
-	go Compare(left, right, []string{"f"}, 1, "xxhash", 10<<20, resultCh, progress, util)
+	go Compare(left, right, []string{"f"}, 1, "xxhash", 10<<20, false, resultCh, progress, util)
 
 	var result CompareResult
 	select {

@@ -34,8 +34,8 @@ type PairJob struct {
 	Rel string
 }
 
-// comparePair stats both files. If size differs, reports "size changed" without hashing. If size same and mtime same, reports identical without hashing. Otherwise (same size, different mtime) hashes and compares. Returns different, reason, and left/right hash, size, mtime for DiffResult.
-func comparePair(leftRoot, rightRoot, relativePath string, hashAlg string, threshold int) (different bool, reason string, leftHash, rightHash string, leftSize, rightSize int64, leftMtime, rightMtime time.Time) {
+// comparePair stats both files. If size differs, reports "size changed" without hashing. If size same and mtime same and not full, reports identical without hashing. Otherwise hashes and compares. When full is true, hashing is always done for same-size pairs. Returns different, reason, and left/right hash, size, mtime for DiffResult.
+func comparePair(leftRoot, rightRoot, relativePath string, hashAlg string, threshold int, full bool) (different bool, reason string, leftHash, rightHash string, leftSize, rightSize int64, leftMtime, rightMtime time.Time) {
 	leftPath := filepath.Join(leftRoot, relativePath)
 	rightPath := filepath.Join(rightRoot, relativePath)
 	leftInfo, err := os.Stat(leftPath)
@@ -54,7 +54,7 @@ func comparePair(leftRoot, rightRoot, relativePath string, hashAlg string, thres
 	if leftSize != rightSize {
 		return true, "size changed", "", "", leftSize, rightSize, leftMtime, rightMtime
 	}
-	if leftMtime.Equal(rightMtime) {
+	if !full && leftMtime.Equal(rightMtime) {
 		return false, "same size and mtime", "", "", 0, 0, time.Time{}, time.Time{}
 	}
 	leftHash, err = hashFile(leftPath, hashAlg, threshold)
@@ -72,8 +72,8 @@ func comparePair(leftRoot, rightRoot, relativePath string, hashAlg string, thres
 }
 
 // Compare runs the comparison phase: numWorkers workers compare each path in pairPaths (size/mtime/hash as needed) and send one CompareResult per pair to resultCh (Diff set when different, nil when identical).
-// progress and workerUtilization must be non-nil. Compare sets progress.TotalPairs and progress.WorkerProcessed, feeds pairs internally, and closes resultCh when done.
-func Compare(leftRoot, rightRoot string, pairPaths []string, numWorkers int, hashAlg string, threshold int, resultCh chan<- CompareResult, progress *ProgressCounts, workerUtilization *WorkerUtilization) {
+// When full is true, hashing is always performed for every same-size pair (same size+mtime shortcut is skipped). progress and workerUtilization must be non-nil.
+func Compare(leftRoot, rightRoot string, pairPaths []string, numWorkers int, hashAlg string, threshold int, full bool, resultCh chan<- CompareResult, progress *ProgressCounts, workerUtilization *WorkerUtilization) {
 	progress.TotalPairs = int32(len(pairPaths))
 	if len(pairPaths) > 0 {
 		progress.WorkerProcessed = make([]int32, numWorkers)
@@ -87,7 +87,7 @@ func Compare(leftRoot, rightRoot string, pairPaths []string, numWorkers int, has
 		go func() {
 			defer wg.Done()
 			for job := range workCh {
-				diff, reason, lHash, rHash, lSize, rSize, lMtime, rMtime := comparePair(leftRoot, rightRoot, job.Rel, hashAlg, threshold)
+				diff, reason, lHash, rHash, lSize, rSize, lMtime, rMtime := comparePair(leftRoot, rightRoot, job.Rel, hashAlg, threshold, full)
 				if diff {
 					resultCh <- CompareResult{RelativePath: job.Rel, Diff: &DiffResult{Rel: job.Rel, Reason: reason, LeftHash: lHash, RightHash: rHash, LeftSize: lSize, RightSize: rSize, LeftMtime: lMtime, RightMtime: rMtime}}
 				} else {
