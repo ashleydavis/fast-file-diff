@@ -2,9 +2,11 @@
 # Performance tests for ffd. Builds optimized binary, generates test data under test/perf/tmp/, runs scenarios, appends one row per run to perf/perf-results.csv.
 # Each CSV row: date_iso, machine, workers, min_sec_per_pair, max_sec_per_pair, avg_sec_per_pair, longest_test_total_sec, longest_test (scenario_filecount of the test that took the longest).
 # machine describes the host (OS, arch, cores, CPU model) so results can be compared across runs on different hardware.
-# Usage: ./perf-test.sh (run from project root)
+# Usage: ./perf-test.sh [workers]   (run from project root; default workers=24 if omitted)
+# Example - run with 1, 2, 24, 48 and 96 workers:
+#   for w in 1 2 24 48 96; do ./perf-test.sh "$w"; done
 set -e
-NUM_WORKERS=24
+NUM_WORKERS=${1:-24}
 BIN="./bin/ffd"
 PERF_TMP_DIR="./test/perf/tmp"
 PERF_OUTPUT_DIR="./perf"
