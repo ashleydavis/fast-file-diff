@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"runtime"
 	"sync/atomic"
 	"time"
@@ -216,77 +215,40 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	}
 	logger.Log("started comparison")
 	startTime := time.Now()
-	pool := lib.NewPathPool()
-	set := lib.NewDiscoveredSet(pool)
-	compareResultCh := make(chan lib.CompareResult, 256)
-	progressCounts := &lib.ProgressCounts{}
 
-	// Phase 1: discover all file pairs by walking both trees.
-	walkFileCh := make(chan lib.DiscoveredFile, 256)
-	walkDoneCh := make(chan struct{})
-	go func() {
-		for file := range walkFileCh {
-			set.Add(file.Rel, file.Side)
-		}
-		close(walkDoneCh)
-	}()
-	const utilWindowTicks = 30 // ~3 seconds at 100ms tick; longer window so "workers active" is meaningful when work is bursty
-	discoveryWorkerUtilization := lib.NewWorkerUtilization(numWorkers, utilWindowTicks)
-	go lib.Discover(
-		[]lib.DirJob{{Root: left, RelDir: "", Side: lib.SideLeft}, {Root: right, RelDir: "", Side: lib.SideRight}},
-		walkFileCh, dirBatchSize, numWorkers, discoveryWorkerUtilization)
-	if !quiet && lib.IsTTY(os.Stderr) {
-		go discoveryProgressLoop(set, walkDoneCh, numWorkers, discoveryWorkerUtilization)
+	// Run the seven-phase pipeline (sequential, no workers).
+	leftInfos := lib.PhaseWalkLeft(left, dirBatchSize)
+	rightInfos := lib.PhaseWalkRight(right, dirBatchSize)
+	buildResult := lib.PhaseBuildPairs(leftInfos, rightInfos)
+	classifyResult := lib.PhaseClassifyPairs(buildResult.Pairs)
+	lib.PhaseHashLeft(left, classifyResult.ContentCheckQueue, hashAlg, hashThreshold)
+	lib.PhaseHashRight(right, classifyResult.ContentCheckQueue, hashAlg, hashThreshold)
+	leftByPath := make(map[string]*lib.FileInfo)
+	for i := range leftInfos {
+		leftByPath[leftInfos[i].Rel] = &leftInfos[i]
 	}
-	<-walkDoneCh
-	scanDuration := time.Since(startTime)
-
-	pairPaths := set.PairPaths()
-	totalCompared := len(pairPaths)
-
-	var diffs []lib.DiffResult
-	compareWorkerUtilization := lib.NewWorkerUtilization(numWorkers, utilWindowTicks)
-	compareStart := time.Now()
-	go lib.Compare(left, right, pairPaths, numWorkers, hashAlg, hashThreshold, compareResultCh, progressCounts, compareWorkerUtilization)
-
-	compareDoneCh := make(chan struct{})
-	if !quiet && lib.IsTTY(os.Stderr) {
-		go compareProgressLoop(progressCounts, compareDoneCh, numWorkers, compareWorkerUtilization)
+	rightByPath := make(map[string]*lib.FileInfo)
+	for i := range rightInfos {
+		rightByPath[rightInfos[i].Rel] = &rightInfos[i]
 	}
-	for result := range compareResultCh {
-		reportCompareResult(result, &diffs, logger)
-	}
-	close(compareDoneCh)
-	compareDuration := time.Since(compareStart)
-	differentCount := len(diffs)
+	diffs := lib.PhaseCompareHashes(classifyResult.ContentCheckQueue, classifyResult.DifferingBySize, buildResult.LeftOnlyPaths, buildResult.RightOnlyPaths, leftByPath, rightByPath)
+
+	totalCompared := len(buildResult.Pairs)
+	leftOnlyCount := len(buildResult.LeftOnlyPaths)
+	rightOnlyCount := len(buildResult.RightOnlyPaths)
+	pairDiffsCount := len(diffs) - leftOnlyCount - rightOnlyCount
+	differentCount := pairDiffsCount
 	sameCount := totalCompared - differentCount
 	if sameCount < 0 {
 		sameCount = 0
 	}
-	leftOnlyPaths := set.LeftOnlyPaths()
-	leftOnlyCount := 0
-	for _, relativePath := range leftOnlyPaths {
-		path := filepath.Join(left, relativePath)
-		if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
-			diffs = append(diffs, lib.DiffResult{Rel: relativePath, Reason: "left only", LeftSize: info.Size(), LeftMtime: info.ModTime().Truncate(time.Second), LeftOnly: true})
-			leftOnlyCount++
-		}
-	}
-	rightOnlyPaths := set.RightOnlyPaths()
-	rightOnlyCount := 0
-	for _, relativePath := range rightOnlyPaths {
-		path := filepath.Join(right, relativePath)
-		if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
-			diffs = append(diffs, lib.DiffResult{Rel: relativePath, Reason: "right only", RightSize: info.Size(), RightMtime: info.ModTime().Truncate(time.Second)})
-			rightOnlyCount++
-		}
-	}
-	logger.Log("left-only files: " + fmt.Sprintf("%d", len(leftOnlyPaths)))
-	for _, relativePath := range leftOnlyPaths {
+	elapsed := time.Since(startTime)
+	logger.Log("left-only files: " + fmt.Sprintf("%d", len(buildResult.LeftOnlyPaths)))
+	for _, relativePath := range buildResult.LeftOnlyPaths {
 		logger.Log("  " + relativePath)
 	}
-	logger.Log("right-only files: " + fmt.Sprintf("%d", len(rightOnlyPaths)))
-	for _, relativePath := range rightOnlyPaths {
+	logger.Log("right-only files: " + fmt.Sprintf("%d", len(buildResult.RightOnlyPaths)))
+	for _, relativePath := range buildResult.RightOnlyPaths {
 		logger.Log("  " + relativePath)
 	}
 	displaySummary(logger, !quiet, runSummary{
@@ -298,9 +260,9 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		differentCount:           differentCount,
 		sameCount:                sameCount,
 		startTime:                startTime,
-		scanDuration:             scanDuration,
-		compareDuration:          compareDuration,
-		workerUtilizationPercent: compareWorkerUtilization.UtilizedPercentWholeRun(),
+		scanDuration:             elapsed,
+		compareDuration:          elapsed,
+		workerUtilizationPercent: 0,
 	})
 	switch outputFormat {
 	case "table":
