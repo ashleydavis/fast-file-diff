@@ -243,6 +243,28 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		sameCount = 0
 	}
 	elapsed := time.Since(startTime)
+
+	// Log each pair as identical or different (same format as previous reportCompareResult behavior).
+	for _, pair := range classifyResult.SameBySizeMtime {
+		logger.Log("identical: " + pair.Rel + " (same size and mtime)")
+	}
+	for _, pair := range classifyResult.DifferingBySize {
+		logger.Log("different: " + pair.Rel + " (size changed)")
+	}
+	for _, pair := range classifyResult.ContentCheckQueue {
+		if pair.Left.Hash == pair.Right.Hash {
+			logger.Log("identical: " + pair.Rel + " (same hash)")
+		} else {
+			logger.Log("different: " + pair.Rel + " (content differs)")
+		}
+	}
+	for _, relativePath := range buildResult.LeftOnlyPaths {
+		logger.Log("different: " + relativePath + " (left only)")
+	}
+	for _, relativePath := range buildResult.RightOnlyPaths {
+		logger.Log("different: " + relativePath + " (right only)")
+	}
+
 	logger.Log("left-only files: " + fmt.Sprintf("%d", len(buildResult.LeftOnlyPaths)))
 	for _, relativePath := range buildResult.LeftOnlyPaths {
 		logger.Log("  " + relativePath)
