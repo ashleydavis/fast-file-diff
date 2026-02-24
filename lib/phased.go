@@ -60,9 +60,41 @@ func PhaseWalkRight(rightRoot string, dirBatchSize int) []FileInfo {
 	return WalkTreeCollectFileInfo(rightRoot, dirBatchSize)
 }
 
-// PhaseBuildPairs builds pairs and left-only/right-only path lists from left and right FileInfo slices. Stub returns zero value until implemented.
+// PhaseBuildPairs builds pairs and left-only/right-only path lists from left and right FileInfo slices.
 func PhaseBuildPairs(left, right []FileInfo) BuildPairsResult {
-	return BuildPairsResult{}
+	leftByPath := make(map[string]*FileInfo)
+	for i := range left {
+		leftByPath[left[i].Rel] = &left[i]
+	}
+	rightByPath := make(map[string]*FileInfo)
+	for i := range right {
+		rightByPath[right[i].Rel] = &right[i]
+	}
+	var leftOnlyPaths []string
+	for i := range left {
+		rel := left[i].Rel
+		if rightByPath[rel] == nil {
+			leftOnlyPaths = append(leftOnlyPaths, rel)
+		}
+	}
+	var rightOnlyPaths []string
+	for i := range right {
+		rel := right[i].Rel
+		if leftByPath[rel] == nil {
+			rightOnlyPaths = append(rightOnlyPaths, rel)
+		}
+	}
+	var pairs []*Pair
+	for rel, leftInfo := range leftByPath {
+		if rightInfo := rightByPath[rel]; rightInfo != nil {
+			pairs = append(pairs, &Pair{Rel: rel, Left: leftInfo, Right: rightInfo})
+		}
+	}
+	return BuildPairsResult{
+		LeftOnlyPaths:  leftOnlyPaths,
+		RightOnlyPaths: rightOnlyPaths,
+		Pairs:          pairs,
+	}
 }
 
 // PhaseClassifyPairs classifies pairs by size/mtime into differing-by-size, content-check queue, and same. Stub returns zero value until implemented.

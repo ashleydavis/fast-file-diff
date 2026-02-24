@@ -142,3 +142,50 @@ func TestPhaseWalkLeft_and_PhaseWalkRight_useSameBehavior(t *testing.T) {
 		t.Errorf("same root should yield same Rel/Size: left %+v, right %+v", left[0], right[0])
 	}
 }
+
+func TestPhaseBuildPairs_leftOnlyRightOnlyPairs(t *testing.T) {
+	mtime := NormalizeMtime(time.Unix(1, 0))
+	left := []FileInfo{
+		{Rel: "a", Size: 1, Mtime: mtime, Hash: ""},
+		{Rel: "b", Size: 2, Mtime: mtime, Hash: ""},
+	}
+	right := []FileInfo{
+		{Rel: "b", Size: 2, Mtime: mtime, Hash: ""},
+		{Rel: "c", Size: 3, Mtime: mtime, Hash: ""},
+	}
+	got := PhaseBuildPairs(left, right)
+	if len(got.LeftOnlyPaths) != 1 || got.LeftOnlyPaths[0] != "a" {
+		t.Errorf("LeftOnlyPaths = %v, want [a]", got.LeftOnlyPaths)
+	}
+	if len(got.RightOnlyPaths) != 1 || got.RightOnlyPaths[0] != "c" {
+		t.Errorf("RightOnlyPaths = %v, want [c]", got.RightOnlyPaths)
+	}
+	if len(got.Pairs) != 1 {
+		t.Fatalf("Pairs len = %d, want 1", len(got.Pairs))
+	}
+	p := got.Pairs[0]
+	if p.Rel != "b" || p.Left != &left[1] || p.Right != &right[0] {
+		t.Errorf("pair: Rel=%q Left=%p Right=%p; want Rel=b Left=%p Right=%p", p.Rel, p.Left, p.Right, &left[1], &right[0])
+	}
+}
+
+func TestPhaseBuildPairs_bothEmpty(t *testing.T) {
+	got := PhaseBuildPairs(nil, nil)
+	if got.LeftOnlyPaths != nil || got.RightOnlyPaths != nil || got.Pairs != nil {
+		t.Errorf("both empty should have nil slices: %+v", got)
+	}
+}
+
+func TestPhaseBuildPairs_oneSideEmpty(t *testing.T) {
+	left := []FileInfo{{Rel: "x", Size: 0, Mtime: time.Time{}, Hash: ""}}
+	got := PhaseBuildPairs(left, nil)
+	if len(got.LeftOnlyPaths) != 1 || got.LeftOnlyPaths[0] != "x" {
+		t.Errorf("LeftOnlyPaths = %v", got.LeftOnlyPaths)
+	}
+	if len(got.RightOnlyPaths) != 0 {
+		t.Errorf("RightOnlyPaths = %v, want empty", got.RightOnlyPaths)
+	}
+	if len(got.Pairs) != 0 {
+		t.Errorf("Pairs = %v, want empty", got.Pairs)
+	}
+}
