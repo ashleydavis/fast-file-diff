@@ -22,7 +22,7 @@ This document lists commits in order to implement [PHASED-RESTRUCTURE-SPEC.md](P
 
 **Smoke tests during the refactor:** **Turn the existing smoke tests off** for Commits 2–7 (e.g. skip them in `./check.sh` or the harness). **Re-enable them only on the final commit** (Commit 8). **Only commit the final commit if all smoke tests pass.** Do not modify or delete existing smoke test scripts; only skip running them until the end. New smoke tests for each phase can still run every commit if desired. **Because smoke tests are off, you can remove the old code path (discover + compare) during the refactor**—you do not have to keep it working until the final commit; remove it as soon as the phased pipeline is wired as the default (e.g. in the same commit that makes the phased pipeline the default, or earlier if convenient).
 
-- **Next:** Commit 3
+- **Next:** Commit 4
 
 ---
 
@@ -56,7 +56,7 @@ This document lists commits in order to implement [PHASED-RESTRUCTURE-SPEC.md](P
 
 ---
 
-## - [ ] Commit 3: Implement walk-left and walk-right with shared implementation
+## - [x] Commit 3: Implement walk-left and walk-right with shared implementation
 
 **Message:** Implement walk-left and walk-right with shared implementation
 

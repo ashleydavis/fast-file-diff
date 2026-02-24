@@ -50,14 +50,14 @@ func ValidPhase(name string) bool {
 	return false
 }
 
-// PhaseWalkLeft walks the left tree and returns FileInfo for every file. Stub returns nil until implemented.
+// PhaseWalkLeft walks the left tree and returns FileInfo for every file.
 func PhaseWalkLeft(leftRoot string, dirBatchSize int) []FileInfo {
-	return nil
+	return WalkTreeCollectFileInfo(leftRoot, dirBatchSize)
 }
 
-// PhaseWalkRight walks the right tree and returns FileInfo for every file. Stub returns nil until implemented.
+// PhaseWalkRight walks the right tree and returns FileInfo for every file.
 func PhaseWalkRight(rightRoot string, dirBatchSize int) []FileInfo {
-	return nil
+	return WalkTreeCollectFileInfo(rightRoot, dirBatchSize)
 }
 
 // PhaseBuildPairs builds pairs and left-only/right-only path lists from left and right FileInfo slices. Stub returns zero value until implemented.

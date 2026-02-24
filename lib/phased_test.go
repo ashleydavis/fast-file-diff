@@ -1,6 +1,8 @@
 package lib
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -66,5 +68,77 @@ func TestValidPhase(t *testing.T) {
 		if ValidPhase(name) {
 			t.Errorf("ValidPhase(%q) = true, want false", name)
 		}
+	}
+}
+
+func TestWalkTreeCollectFileInfo_emptyDir(t *testing.T) {
+	dir := t.TempDir()
+	got := WalkTreeCollectFileInfo(dir, 4096)
+	if len(got) != 0 {
+		t.Errorf("empty dir: len = %d, want 0", len(got))
+	}
+}
+
+func TestWalkTreeCollectFileInfo_oneFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "a.txt")
+	if err := os.WriteFile(path, []byte("hello"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	got := WalkTreeCollectFileInfo(dir, 4096)
+	if len(got) != 1 {
+		t.Fatalf("len = %d, want 1", len(got))
+	}
+	if got[0].Rel != "a.txt" {
+		t.Errorf("Rel = %q, want a.txt", got[0].Rel)
+	}
+	if got[0].Size != 5 {
+		t.Errorf("Size = %d, want 5", got[0].Size)
+	}
+	if got[0].Hash != "" {
+		t.Errorf("Hash = %q, want empty", got[0].Hash)
+	}
+	// Mtime normalized to second
+	if got[0].Mtime.UnixNano()%int64(time.Second) != 0 {
+		t.Errorf("Mtime should be normalized to second, got %v", got[0].Mtime)
+	}
+}
+
+func TestWalkTreeCollectFileInfo_subdir(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "sub"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "top.txt"), []byte("x"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sub", "nested.txt"), []byte("y"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	got := WalkTreeCollectFileInfo(dir, 4096)
+	if len(got) != 2 {
+		t.Fatalf("len = %d, want 2", len(got))
+	}
+	paths := make(map[string]int64)
+	for _, f := range got {
+		paths[f.Rel] = f.Size
+	}
+	if paths["top.txt"] != 1 || paths[filepath.Join("sub", "nested.txt")] != 1 {
+		t.Errorf("unexpected paths or sizes: %v", paths)
+	}
+}
+
+func TestPhaseWalkLeft_and_PhaseWalkRight_useSameBehavior(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "f"), []byte("a"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	left := PhaseWalkLeft(dir, 4096)
+	right := PhaseWalkRight(dir, 4096)
+	if len(left) != 1 || len(right) != 1 {
+		t.Fatalf("PhaseWalkLeft len=%d, PhaseWalkRight len=%d, want 1 each", len(left), len(right))
+	}
+	if left[0].Rel != right[0].Rel || left[0].Size != right[0].Size {
+		t.Errorf("same root should yield same Rel/Size: left %+v, right %+v", left[0], right[0])
 	}
 }
