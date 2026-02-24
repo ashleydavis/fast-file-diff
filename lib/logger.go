@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -67,19 +68,33 @@ func NewLogger() (*Logger, error) {
 	return logger, nil
 }
 
+// mainLogFlushThreshold is the buffer size in bytes at which we write and sync the main log to disk.
+const mainLogFlushThreshold = 10 * 1024 * 1024 // 10 MiB
+
 // run is the single worker that owns the log files and processes all log requests.
+// Normal Log() calls are buffered; the buffer is written and synced every ~10 MiB or on Close.
 func (logger *Logger) run(mainFile, errorFile *os.File) {
+	var mainBuf bytes.Buffer
+	flushMain := func() {
+		if mainFile != nil && mainBuf.Len() > 0 {
+			mainBuf.WriteTo(mainFile)
+			mainFile.Sync()
+			mainBuf.Reset()
+		}
+	}
 	for req := range logger.reqCh {
 		switch req.kind {
 		case reqLog:
-			// Commented out for performance testing: avoid file write + Sync per log line.
-			// if mainFile != nil {
-			// 	fmt.Fprintln(mainFile, req.msg)
-			// 	mainFile.Sync()
-			// }
+			if mainFile != nil {
+				fmt.Fprintln(&mainBuf, req.msg)
+				if mainBuf.Len() >= mainLogFlushThreshold {
+					flushMain()
+				}
+			}
 			close(req.done)
 		case reqLogError:
 			logger.errorCount++
+			flushMain() // flush before error so order is preserved
 			if mainFile != nil {
 				fmt.Fprintln(mainFile, "error:", req.err.Error())
 				mainFile.Sync()
@@ -90,6 +105,7 @@ func (logger *Logger) run(mainFile, errorFile *os.File) {
 			}
 			close(req.done)
 		case reqFatal:
+			flushMain()
 			msg := req.err.Error()
 			if mainFile != nil {
 				fmt.Fprintln(mainFile, "fatal:", msg)
@@ -103,6 +119,7 @@ func (logger *Logger) run(mainFile, errorFile *os.File) {
 		case reqGetErrorCount:
 			req.countResp <- logger.errorCount
 		case reqClose:
+			flushMain()
 			if mainFile != nil {
 				mainFile.Close()
 				mainFile = nil

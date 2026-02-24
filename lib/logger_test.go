@@ -31,6 +31,7 @@ func TestLogger_Log_writesToMainOnly(t *testing.T) {
 	defer logger.Close()
 	msg := "test main log line"
 	logger.Log(msg)
+	logger.Close() // flush buffer before reading file
 	entries, _ := os.ReadDir(logger.TempDir())
 	for _, entry := range entries {
 		if strings.Contains(entry.Name(), "main") && !entry.IsDir() {
