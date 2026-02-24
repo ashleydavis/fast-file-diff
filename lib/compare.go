@@ -29,6 +29,11 @@ type CompareResult struct {
 	Reason       string      // when identical, reason (e.g. "same size and mtime", "same hash")
 }
 
+// PairJob is a single pair to compare (relative path); compare phase stats both files.
+type PairJob struct {
+	Rel string
+}
+
 // comparePair stats both files. If size differs, reports "size changed" without hashing. If size same and mtime same, reports identical without hashing. Otherwise (same size, different mtime) hashes and compares. Returns different, reason, and left/right hash, size, mtime for DiffResult.
 func comparePair(leftRoot, rightRoot, relativePath string, hashAlg string, threshold int) (different bool, reason string, leftHash, rightHash string, leftSize, rightSize int64, leftMtime, rightMtime time.Time) {
 	leftPath := filepath.Join(leftRoot, relativePath)
