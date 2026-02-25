@@ -248,15 +248,19 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	for result := range compareResultCh {
 		reportCompareResult(result, &diffs, logger)
 	}
+
 	close(compareDoneCh)
+
 	compareDuration := time.Since(compareStart)
 	differentCount := len(diffs)
 	sameCount := totalCompared - differentCount
 	if sameCount < 0 {
 		sameCount = 0
 	}
+
 	leftOnlyPaths := set.LeftOnlyPaths()
 	leftOnlyCount := 0
+
 	for _, relativePath := range leftOnlyPaths {
 		path := filepath.Join(left, relativePath)
 		if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
@@ -264,8 +268,10 @@ func runRoot(cmd *cobra.Command, args []string) error {
 			leftOnlyCount++
 		}
 	}
+
 	rightOnlyPaths := set.RightOnlyPaths()
 	rightOnlyCount := 0
+
 	for _, relativePath := range rightOnlyPaths {
 		path := filepath.Join(right, relativePath)
 		if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
@@ -273,14 +279,19 @@ func runRoot(cmd *cobra.Command, args []string) error {
 			rightOnlyCount++
 		}
 	}
+
 	logger.Log("left-only files: " + fmt.Sprintf("%d", len(leftOnlyPaths)))
 	for _, relativePath := range leftOnlyPaths {
 		logger.Log("  " + relativePath)
 	}
+
 	logger.Log("right-only files: " + fmt.Sprintf("%d", len(rightOnlyPaths)))
 	for _, relativePath := range rightOnlyPaths {
 		logger.Log("  " + relativePath)
 	}
+
+	logger.Flush()
+
 	displaySummary(logger, !quiet, runSummary{
 		leftDir:                  left,
 		rightDir:                 right,

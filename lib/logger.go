@@ -21,6 +21,7 @@ const (
 	reqFatal
 	reqClose
 	reqGetErrorCount
+	reqFlush
 )
 
 // logRequest is sent to the logger worker; only fields for the request kind are used.
@@ -118,6 +119,9 @@ func (logger *Logger) run(mainFile, errorFile *os.File) {
 			close(req.done)
 		case reqGetErrorCount:
 			req.countResp <- logger.errorCount
+		case reqFlush:
+			flushMain()
+			close(req.done)
 		case reqClose:
 			flushMain()
 			if mainFile != nil {
@@ -178,6 +182,13 @@ func (logger *Logger) ErrorCount() int {
 	resp := make(chan int, 1)
 	logger.reqCh <- logRequest{kind: reqGetErrorCount, countResp: resp}
 	return <-resp
+}
+
+// Flush writes and syncs the main log buffer to disk; use after compare so the log file is up to date before reporting left-only/right-only or exit.
+func (logger *Logger) Flush() {
+	done := make(chan struct{})
+	logger.reqCh <- logRequest{kind: reqFlush, done: done}
+	<-done
 }
 
 // Closes both log files; the worker exits so later Log/LogError calls will block. Safe to call multiple times.
