@@ -17,7 +17,7 @@ func TestFormatTable_columnsAndRows(t *testing.T) {
 	}
 	tmp := filepath.Join(t.TempDir(), "out")
 	outFile, _ := os.Create(tmp)
-	FormatTable(diffs, outFile)
+	formatTableTo(diffs, outFile)
 	outFile.Close()
 	output, _ := os.ReadFile(tmp)
 	if len(output) == 0 {
@@ -60,7 +60,7 @@ func TestFormatJSON_validJSONAndContainsPath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	FormatJSON(diffs, outFile)
+	formatJSONTo(diffs, outFile)
 	outFile.Close()
 	output, err := os.ReadFile(tmp)
 	if err != nil {
@@ -87,7 +87,7 @@ func TestFormatYAML_containsPathAndReason(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	FormatYAML(diffs, outFile)
+	formatYAMLTo(diffs, outFile)
 	outFile.Close()
 	output, err := os.ReadFile(tmp)
 	if err != nil {

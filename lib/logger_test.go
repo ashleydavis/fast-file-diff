@@ -8,10 +8,7 @@ import (
 )
 
 func TestNewLogger_createsLogFiles(t *testing.T) {
-	logger, err := NewLogger()
-	if err != nil {
-		t.Fatalf("NewLogger() err = %v", err)
-	}
+	logger := NewLogger()
 	defer logger.Close()
 	if logger.TempDir() == "" {
 		t.Error("TempDir() is empty")
@@ -27,10 +24,10 @@ func TestNewLogger_createsLogFiles(t *testing.T) {
 }
 
 func TestLogger_Log_writesToMainOnly(t *testing.T) {
-	logger, _ := NewLogger()
+	logger := NewLogger()
 	defer logger.Close()
 	msg := "test main log line"
-	logger.Log(msg)
+	logger.Write(msg)
 	logger.Close() // flush buffer before reading file
 	entries, _ := os.ReadDir(logger.TempDir())
 	for _, entry := range entries {
@@ -46,7 +43,7 @@ func TestLogger_Log_writesToMainOnly(t *testing.T) {
 }
 
 func TestLogger_LogError_writesBothAndIncrementsCount(t *testing.T) {
-	logger, _ := NewLogger()
+	logger := NewLogger()
 	defer logger.Close()
 	logger.LogError(os.ErrNotExist)
 	if logger.ErrorCount() != 1 {
@@ -58,8 +55,34 @@ func TestLogger_LogError_writesBothAndIncrementsCount(t *testing.T) {
 	}
 }
 
+// TestLogger_Flush_writesBufferedToDisk verifies that Flush writes the main log buffer to disk without closing the logger.
+func TestLogger_Flush_writesBufferedToDisk(t *testing.T) {
+	logger := NewLogger()
+	defer logger.Close()
+	msg := "flush test line"
+	logger.Write(msg)
+	logger.Flush()
+	entries, err := os.ReadDir(logger.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if strings.Contains(entry.Name(), "main") && !entry.IsDir() {
+			data, err := os.ReadFile(filepath.Join(logger.TempDir(), entry.Name()))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(data), msg) {
+				t.Errorf("main log after Flush() does not contain %q", msg)
+			}
+			return
+		}
+	}
+	t.Error("no main log file found")
+}
+
 func TestLogger_Close_idempotent(t *testing.T) {
-	logger, _ := NewLogger()
+	logger := NewLogger()
 	logger.Close()
 	logger.Close()
 }
@@ -82,10 +105,7 @@ func TestIsTTY_nilReturnsFalse(t *testing.T) {
 }
 
 func TestLogger_PrintLogPaths_doesNotPanic(t *testing.T) {
-	logger, err := NewLogger()
-	if err != nil {
-		t.Fatal(err)
-	}
+	logger := NewLogger()
 	defer logger.Close()
 	logger.PrintLogPaths()
 }

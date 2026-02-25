@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -19,6 +20,9 @@ const (
 	ExitNonFatal = 3
 )
 
+// log is the global logger (set at startup by lib); all code in this package uses it.
+var log = lib.Log
+
 // runSummary holds the counts and timings needed to display the run summary.
 type runSummary struct {
 	leftDir                  string
@@ -31,11 +35,12 @@ type runSummary struct {
 	startTime                time.Time
 	scanDuration             time.Duration
 	compareDuration          time.Duration
+	numWorkers               int
 	workerUtilizationPercent int
 }
 
 // displaySummary writes the run summary to the logger (always) and to stderr when printToStderr is true.
-func displaySummary(logger *lib.Logger, printToStderr bool, s runSummary) {
+func displaySummary(printToStderr bool, s runSummary) {
 	elapsed := time.Since(s.startTime)
 	avgPerComparison := time.Duration(0)
 	if s.totalCompared > 0 {
@@ -55,25 +60,31 @@ func displaySummary(logger *lib.Logger, printToStderr bool, s runSummary) {
 		fmt.Sprintf("  Comparing:              %s", s.compareDuration.Round(time.Millisecond)),
 		fmt.Sprintf("  Total time:             %s", elapsed.Round(time.Millisecond)),
 		fmt.Sprintf("  Average per comparison: %s", avgPerComparison.Round(time.Microsecond)),
+		fmt.Sprintf("  Workers:                %d", s.numWorkers),
 		fmt.Sprintf("  Workers utilized:       %d%%", s.workerUtilizationPercent),
 	}
 	for _, line := range lines {
 		if line == "" {
-			logger.Log("")
+			log.Write("")
 			if printToStderr {
 				fmt.Fprintln(os.Stderr)
 			}
 		} else {
-			logger.Log(line)
+			log.Write(line)
 			if printToStderr {
 				fmt.Fprintln(os.Stderr, line)
 			}
 		}
 	}
+	log.Write("")
+	if printToStderr {
+		fmt.Fprintln(os.Stderr)
+	}
 }
 
 // Runs the CLI; on any error exits with ExitUsage so scripts get a consistent exit code.
 func main() {
+	defer log.Close()
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(ExitUsage)
 	}
@@ -90,6 +101,7 @@ var hashThreshold int
 var outputFormat string
 var quiet bool
 var full bool
+var showSame bool
 
 // Single top-level command; requireZeroOrTwoArgs validates args, runRoot does the diff.
 var rootCmd = &cobra.Command{
@@ -114,6 +126,7 @@ func init() {
 	rootCmd.Flags().StringVar(&outputFormat, "format", "text", "Output format: text, table, json, yaml")
 	rootCmd.Flags().BoolVar(&quiet, "quiet", false, "Suppress progress and final error-log message (for scripting)")
 	rootCmd.Flags().BoolVar(&full, "full", false, "Always hash file contents for every pair (ignore same size+mtime shortcut)")
+	rootCmd.Flags().BoolVar(&showSame, "show-same", false, "In the log file, include the full list of identical (same) files")
 	rootCmd.AddCommand(lsCmd)
 	rootCmd.AddCommand(versionCmd)
 }
@@ -190,23 +203,17 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "right directory: %v\n", err)
 		os.Exit(ExitFatal)
 	}
-	logger, err := lib.NewLogger()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "logger: %v\n", err)
-		os.Exit(ExitFatal)
-	}
-	defer logger.Close()
 	if !quiet {
-		defer logger.PrintLogPaths()
+		defer log.PrintLogPaths()
 	}
 	// Print compared directories at start (logger always; stderr when not quiet).
-	logger.Log("left directory: " + left)
-	logger.Log("right directory: " + right)
+	log.Write("left directory: " + left)
+	log.Write("right directory: " + right)
 	if !quiet {
 		fmt.Fprintln(os.Stderr, "Left directory:  ", left)
 		fmt.Fprintln(os.Stderr, "Right directory: ", right)
 	}
-	logger.Log("started comparison")
+	log.Write("started comparison")
 	startTime := time.Now()
 	pool := lib.NewPathPool()
 	set := lib.NewDiscoveredSet(pool)
@@ -245,8 +252,12 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	if !quiet && lib.IsTTY(os.Stderr) {
 		go compareProgressLoop(progressCounts, compareDoneCh, numWorkers, compareWorkerUtilization)
 	}
+	var compareResults []lib.CompareResult
 	for result := range compareResultCh {
-		reportCompareResult(result, &diffs, logger)
+		compareResults = append(compareResults, result)
+		if result.Diff != nil {
+			diffs = append(diffs, *result.Diff)
+		}
 	}
 
 	close(compareDoneCh)
@@ -280,19 +291,20 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	logger.Log("left-only files: " + fmt.Sprintf("%d", len(leftOnlyPaths)))
-	for _, relativePath := range leftOnlyPaths {
-		logger.Log("  " + relativePath)
+	log.Flush()
+
+	switch outputFormat {
+	case "table":
+		lib.FormatTable(diffs)
+	case "json":
+		lib.FormatJSON(diffs)
+	case "yaml":
+		lib.FormatYAML(diffs)
+	default:
+		lib.FormatTextTreeWithSections(diffs, differentCount, compareResults, showSame)
 	}
 
-	logger.Log("right-only files: " + fmt.Sprintf("%d", len(rightOnlyPaths)))
-	for _, relativePath := range rightOnlyPaths {
-		logger.Log("  " + relativePath)
-	}
-
-	logger.Flush()
-
-	displaySummary(logger, !quiet, runSummary{
+	displaySummary(!quiet, runSummary{
 		leftDir:                  left,
 		rightDir:                 right,
 		totalCompared:            totalCompared,
@@ -303,19 +315,10 @@ func runRoot(cmd *cobra.Command, args []string) error {
 		startTime:                startTime,
 		scanDuration:             scanDuration,
 		compareDuration:          compareDuration,
+		numWorkers:               numWorkers,
 		workerUtilizationPercent: compareWorkerUtilization.UtilizedPercentWholeRun(),
 	})
-	switch outputFormat {
-	case "table":
-		lib.FormatTable(diffs, os.Stdout)
-	case "json":
-		lib.FormatJSON(diffs, os.Stdout)
-	case "yaml":
-		lib.FormatYAML(diffs, os.Stdout)
-	default:
-		lib.FormatTextTree(diffs, os.Stdout)
-	}
-	if logger.ErrorCount() > 0 {
+	if log.ErrorCount() > 0 {
 		if !quiet {
 			fmt.Fprintln(os.Stderr, "Errors occurred; check the error log for details.")
 		}
@@ -324,14 +327,89 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// reportCompareResult appends the result to diffs when different and logs either "different" or "identical" with reason to the logger.
-func reportCompareResult(result lib.CompareResult, diffs *[]lib.DiffResult, logger *lib.Logger) {
-	if result.Diff != nil {
-		*diffs = append(*diffs, *result.Diff)
-		logger.Log("different: " + result.RelativePath + " (" + result.Diff.Reason + ")")
-	} else {
-		logger.Log("identical: " + result.RelativePath + " (" + result.Reason + ")")
+// onlySideLogLines returns log lines for "left only" or "right only" paths. When a directory has all its contents in paths, it returns a single "directory X is left/right only and contains N files" line instead of listing each file. baseDir is the tree root (left or right); sideLabel is "left" or "right".
+func onlySideLogLines(baseDir string, paths []string, sideLabel string) []string {
+	if len(paths) == 0 {
+		return nil
 	}
+	pathSet := make(map[string]bool)
+	pathIsDir := make(map[string]bool)
+	for _, p := range paths {
+		pathSet[p] = true
+		full := filepath.Join(baseDir, p)
+		if info, err := os.Stat(full); err == nil {
+			pathIsDir[p] = info.IsDir()
+		}
+	}
+	var collapsibleDirs map[string]int // dir -> number of regular files under it
+	for _, p := range paths {
+		if !pathIsDir[p] {
+			continue
+		}
+		fullDir := filepath.Join(baseDir, p)
+		fileCount := 0
+		allUnderInSet := true
+		_ = filepath.Walk(fullDir, func(fullPath string, info os.FileInfo, err error) error {
+			if err != nil {
+				return nil
+			}
+			rel, err := filepath.Rel(baseDir, fullPath)
+			if err != nil {
+				return nil
+			}
+			relSlash := filepath.ToSlash(rel)
+			if relSlash == "." {
+				return nil
+			}
+			if !pathSet[relSlash] {
+				allUnderInSet = false
+				return filepath.SkipAll
+			}
+			if info.Mode().IsRegular() {
+				fileCount++
+			}
+			return nil
+		})
+		if allUnderInSet && fileCount >= 0 {
+			if collapsibleDirs == nil {
+				collapsibleDirs = make(map[string]int)
+			}
+			collapsibleDirs[p] = fileCount
+		}
+	}
+	// Maximal collapsible: dirs not under any other collapsible dir
+	maximal := make(map[string]int)
+	for d, n := range collapsibleDirs {
+		underAnother := false
+		for d2 := range collapsibleDirs {
+			if d2 != d && strings.HasPrefix(d, d2+"/") {
+				underAnother = true
+				break
+			}
+		}
+		if !underAnother {
+			maximal[d] = n
+		}
+	}
+	var lines []string
+	for _, p := range paths {
+		if n, ok := maximal[p]; ok {
+			lines = append(lines, fmt.Sprintf("directory %s is %s only and contains %d file(s)", p, sideLabel, n))
+			continue
+		}
+		underMaximal := false
+		for d := range maximal {
+			if p != d && strings.HasPrefix(p, d+"/") {
+				underMaximal = true
+				break
+			}
+		}
+		if underMaximal {
+			continue
+		}
+		lines = append(lines, "  "+p)
+	}
+	return lines
 }
 
 // Prints "scanning: N left-only, N right-only, N pairs" to stderr on a ticker until doneCh closes. Appends the percentage of workers utilized (from workerUtilization.Tick()).
@@ -384,6 +462,7 @@ func compareProgressLoop(progressCounts *lib.ProgressCounts, doneCh <-chan struc
 	for {
 		select {
 		case <-doneCh:
+			writeProgressLine("")
 			return
 		case <-tick.C:
 			processedCount := atomic.LoadInt32(&progressCounts.Processed)

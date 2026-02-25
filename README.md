@@ -2,6 +2,10 @@
 
 A fast CLI that reports which files differ between two directories (by path and content), optimized for speed on large trees.
 
+## Todo
+
+- Should be able to set an error code when the tool exits with all "all same" or "differences".
+
 ## Quick start (latest release)
 
 Pre-built binaries are on the [Releases](https://github.com/ashleydavis/fast-file-diff/releases/latest) page. Download the file for your platform:
@@ -84,6 +88,7 @@ These apply to the diff command; `ls` also accepts `--dir-batch-size`.
 | `--format` | text | Output format: `text`, `table`, `json`, `yaml`. |
 | `--quiet` | false | Suppress progress, left/right directory lines, summary on stderr, and final error-log message (for scripting). |
 | `--full` | false | Always hash file contents for every pair; do not skip hashing when size and mtime already match (slower but verifies content). |
+| `--show-same` | false | In the log file, include the full list of identical (same) files under the "Same (identical):" section. |
 
 ### Diff (default)
 

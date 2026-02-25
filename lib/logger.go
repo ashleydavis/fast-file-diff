@@ -35,19 +35,22 @@ type logRequest struct {
 
 // Logger writes to a main log and a separate error log under a temp dir; used so we can report log paths and keep errors in one place. Safe for concurrent use via a single worker goroutine and channel.
 type Logger struct {
-	tempDir    string
-	mainPath   string
-	errorPath  string
-	reqCh      chan logRequest
-	errorCount int
-	closeOnce  sync.Once
+	tempDir        string
+	mainPath       string
+	errorPath      string
+	requestChannel chan logRequest
+	errorCount     int
+	closeOnce      sync.Once
 }
 
-// Creates a temp dir and two log files (main + errors) with dated names; callers should defer Close and optionally PrintLogPaths so users know where to look.
-func NewLogger() (*Logger, error) {
+// Log is the global logger, created at startup so any module can access it.
+var Log = NewLogger()
+
+// Creates a temp dir and two log files (main + errors) with dated names; callers should defer Close and optionally PrintLogPaths so users know where to look. Panics on failure.
+func NewLogger() *Logger {
 	tmp, err := os.MkdirTemp("", "ffd-*")
 	if err != nil {
-		return nil, err
+		panic("logger: " + err.Error())
 	}
 	date := time.Now().Format("20060102")
 	base := filepath.Join(tmp, fmt.Sprintf("ffd-%s-001", date))
@@ -56,17 +59,17 @@ func NewLogger() (*Logger, error) {
 	mainFile, err := os.Create(mainPath)
 	if err != nil {
 		os.RemoveAll(tmp)
-		return nil, err
+		panic("logger: " + err.Error())
 	}
 	errorFile, err := os.Create(errorPath)
 	if err != nil {
 		mainFile.Close()
 		os.RemoveAll(tmp)
-		return nil, err
+		panic("logger: " + err.Error())
 	}
-	logger := &Logger{tempDir: tmp, mainPath: mainPath, errorPath: errorPath, reqCh: make(chan logRequest)}
+	logger := &Logger{tempDir: tmp, mainPath: mainPath, errorPath: errorPath, requestChannel: make(chan logRequest)}
 	go logger.run(mainFile, errorFile)
-	return logger, nil
+	return logger
 }
 
 // mainLogFlushThreshold is the buffer size in bytes at which we write and sync the main log to disk.
@@ -83,31 +86,31 @@ func (logger *Logger) run(mainFile, errorFile *os.File) {
 			mainBuf.Reset()
 		}
 	}
-	for req := range logger.reqCh {
-		switch req.kind {
+	for request := range logger.requestChannel {
+		switch request.kind {
 		case reqLog:
 			if mainFile != nil {
-				fmt.Fprintln(&mainBuf, req.msg)
+				fmt.Fprintln(&mainBuf, request.msg)
 				if mainBuf.Len() >= mainLogFlushThreshold {
 					flushMain()
 				}
 			}
-			close(req.done)
+			close(request.done)
 		case reqLogError:
 			logger.errorCount++
 			flushMain() // flush before error so order is preserved
 			if mainFile != nil {
-				fmt.Fprintln(mainFile, "error:", req.err.Error())
+				fmt.Fprintln(mainFile, "error:", request.err.Error())
 				mainFile.Sync()
 			}
 			if errorFile != nil {
-				fmt.Fprintln(errorFile, req.err.Error())
+				fmt.Fprintln(errorFile, request.err.Error())
 				errorFile.Sync()
 			}
-			close(req.done)
+			close(request.done)
 		case reqFatal:
 			flushMain()
-			msg := req.err.Error()
+			msg := request.err.Error()
 			if mainFile != nil {
 				fmt.Fprintln(mainFile, "fatal:", msg)
 				mainFile.Sync()
@@ -116,12 +119,12 @@ func (logger *Logger) run(mainFile, errorFile *os.File) {
 				fmt.Fprintln(errorFile, msg)
 				errorFile.Sync()
 			}
-			close(req.done)
+			close(request.done)
 		case reqGetErrorCount:
-			req.countResp <- logger.errorCount
+			request.countResp <- logger.errorCount
 		case reqFlush:
 			flushMain()
-			close(req.done)
+			close(request.done)
 		case reqClose:
 			flushMain()
 			if mainFile != nil {
@@ -132,7 +135,7 @@ func (logger *Logger) run(mainFile, errorFile *os.File) {
 				errorFile.Close()
 				errorFile = nil
 			}
-			close(req.done)
+			close(request.done)
 			return
 		}
 	}
@@ -141,24 +144,24 @@ func (logger *Logger) run(mainFile, errorFile *os.File) {
 // Returns the temp directory path so callers can inspect log files or pass to other tools.
 func (logger *Logger) TempDir() string { return logger.tempDir }
 
-// Appends a line to the main log and syncs; used for normal progress/diff messages. Skips if already closed.
-func (logger *Logger) Log(msg string) {
+// Write appends a line to the main log and syncs; used for normal progress/diff messages. Skips if already closed.
+func (logger *Logger) Write(message string) {
 	done := make(chan struct{})
-	logger.reqCh <- logRequest{kind: reqLog, msg: msg, done: done}
+	logger.requestChannel <- logRequest{kind: reqLog, msg: message, done: done}
 	<-done
 }
 
 // Writes the error to both main and error logs and increments the non-fatal count; used so we can report "N errors, check error log" at the end without exiting.
 func (logger *Logger) LogError(err error) {
 	done := make(chan struct{})
-	logger.reqCh <- logRequest{kind: reqLogError, err: err, done: done}
+	logger.requestChannel <- logRequest{kind: reqLogError, err: err, done: done}
 	<-done
 }
 
 // Logs the error to both files, prints to stderr, then exits with FatalExitCode. Used for unrecoverable setup failures (e.g. can't create logger).
 func (logger *Logger) Fatal(err error) {
 	done := make(chan struct{})
-	logger.reqCh <- logRequest{kind: reqFatal, err: err, done: done}
+	logger.requestChannel <- logRequest{kind: reqFatal, err: err, done: done}
 	<-done
 	fmt.Fprintln(os.Stderr, err.Error())
 	os.Exit(FatalExitCode)
@@ -180,14 +183,14 @@ func (logger *Logger) PrintLogPaths() {
 // Returns how many times LogError was called; used to decide exit code and whether to tell the user to check the error log.
 func (logger *Logger) ErrorCount() int {
 	resp := make(chan int, 1)
-	logger.reqCh <- logRequest{kind: reqGetErrorCount, countResp: resp}
+	logger.requestChannel <- logRequest{kind: reqGetErrorCount, countResp: resp}
 	return <-resp
 }
 
 // Flush writes and syncs the main log buffer to disk; use after compare so the log file is up to date before reporting left-only/right-only or exit.
 func (logger *Logger) Flush() {
 	done := make(chan struct{})
-	logger.reqCh <- logRequest{kind: reqFlush, done: done}
+	logger.requestChannel <- logRequest{kind: reqFlush, done: done}
 	<-done
 }
 
@@ -195,9 +198,9 @@ func (logger *Logger) Flush() {
 func (logger *Logger) Close() {
 	logger.closeOnce.Do(func() {
 		done := make(chan struct{})
-		logger.reqCh <- logRequest{kind: reqClose, done: done}
+		logger.requestChannel <- logRequest{kind: reqClose, done: done}
 		<-done
-		close(logger.reqCh)
+		close(logger.requestChannel)
 	})
 }
 
